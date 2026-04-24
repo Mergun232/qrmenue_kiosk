@@ -1,0 +1,1084 @@
+{
+  "info": {
+    "_postman_id": "65e2e224-ebed-41d0-b018-e480ebfb2e56",
+    "name": "REST DEMO",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "26180328"
+  },
+  "item": [
+    {
+      "name": "Pairing",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.variables.get(\"url\")"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n   \"TransactionHandle\":{\r\n        \"SerialNumber\" :\"N500Z000028\",\r\n        \"TransactionDate\":\"2023-10-27T12:25:30.310773\",\r\n        \"TransactionSequence\":1,\r\n        \"Fingerprint\":\"test1\"\r\n    }\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/Pairing",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "Pairing"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "CompleteSale",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "\r",
+              "\r",
+              "pm.collectionVariables.set(\"transSeq\",pm.collectionVariables.get(\"transSeq\")+1);\r",
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {
+          "connection": true
+        }
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Connection",
+            "value": "close",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"TransactionHandle\": {\r\n        \"SerialNumber\": \"N500Z000028\",\r\n        \"TransactionDate\": \"2023-10-27T12:41:30.310773\",\r\n        \"TransactionSequence\": 9,\r\n        \"Fingerprint\": \"test1\"\r\n    },\r\n    \"Sale\": {\r\n        \"RefererApp\": \"Harici Uygulama\",\r\n        \"RefererAppVersion\": \"1.0.0\",\r\n        \"OrderNo\": \"0000000000ABC0003\",\r\n        \"MainDocumentType\": 1,\r\n        \"GrossPrice\": 20,\r\n        \"TotalPrice\": 20,\r\n        \"CurrencyCode\": \"TRY\",\r\n        \"ExchangeRate\": 1,\r\n        \"PriceEffect\": {\r\n            \"Type\": 2,\r\n            \"Rate\": 10,\r\n            \"Amount\": null\r\n        },\r\n        \"SendPhoneNotification\": false,\r\n        \"SendEMailNotification\": true,\r\n        \"NotificationPhone\": \"\",\r\n        \"NotificationEMail\": \"me@info.com\",\r\n        \"ShowCreditCardMenu\": false,\r\n        \"SelectedSlots\": [\r\n            \"rf\",\r\n            \"icc\",\r\n            \"manual\"\r\n        ],\r\n        \"AllowDismissCardRead\": false,\r\n        \"CardReadTimeout\": 30,\r\n        \"SkipAmountCash\": false,\r\n        \"CancelPaymentLater\": true,\r\n        \"AskCustomer\": false,\r\n        \"SendResponseBeforePrint\": false,\r\n        \"AddedSaleItems\": [\r\n            {\r\n                \"Name\": \"Gofret\",\r\n                \"IsGeneric\": false,\r\n                \"UnitCode\": \"KGM\",\r\n                \"TaxGroupCode\": \"KDV18\",\r\n                \"ItemQuantity\": 1,\r\n                \"UnitPriceAmount\": 20,\r\n                \"GrossPriceAmount\": 20,\r\n                \"TotalPriceAmount\": 20,\r\n                \"ReservedText\": \"TEST0001\",\r\n                \"PriceEffect\": {\r\n                    \"Type\": 1,\r\n                    \"Rate\": 10,\r\n                    \"Amount\": null\r\n                }\r\n            }\r\n        ],\r\n        \"PaymentInformations\": [\r\n            {\r\n                \"Mediator\": 2,\r\n                \"Amount\": 6.2,\r\n                \"CurrencyCode\": \"TRY\",\r\n                \"ExchangeRate\": 1\r\n            }\r\n        ],\r\n        \"ExternalPayments\": [\r\n            {\r\n                \"Type\": 2,\r\n                \"Mediator\": 9,\r\n                \"Brand\": 9,\r\n                \"CardNo\": \"554960******2794\",\r\n                \"AuthorizationCode\": \"155\",\r\n                \"Amount\": 10,\r\n                \"CurrencyCode\": \"TRY\",\r\n                \"ExchangeRate\": 1\r\n            }\r\n        ],\r\n        \"ReceiptInformation\": {\r\n            \"ReceiptImageEnabled\": true,\r\n            \"ReceiptWidth\": \"58mm\",\r\n            \"PrintCustomerReceipt\": true,\r\n            \"PrintCustomerReceiptCopy\": true,\r\n            \"PrintMerchantReceipt\": true,\r\n            \"EnableExchangeRateField\": true\r\n        },\r\n        \"CustomerParty\": {\r\n            \"CustomerType\": 1,\r\n            \"FirstName\": \"John\",\r\n            \"MiddleName\": \"\",\r\n            \"FamilyName\": \"Doe\",\r\n            \"CompanyName\": \"\",\r\n            \"TaxOfficeCode\": \"\",\r\n            \"TaxNumber\": \"11111111111\",\r\n            \"Phone\": \"\",\r\n            \"EMail\": \"\",\r\n            \"Country\": \"Türkiye\",\r\n            \"City\": \"Ankara\",\r\n            \"District\": \"Çankaya\",\r\n            \"Neighborhood\": \"\",\r\n            \"Address\": \"\"\r\n        },\r\n        \"AdditionalInfo\": [\r\n            {\r\n                \"Key\": \"Test\",\r\n                \"Value\": \"Test\",\r\n                \"Print\": true\r\n            }\r\n        ],\r\n        \"TopPrintibleItems\": [\r\n            [\r\n                {\r\n                    \"type\": \"dSpace\",\r\n                    \"height\": 20\r\n                },\r\n                {\r\n                    \"type\": \"dText\",\r\n                    \"alignment\": \"center\",\r\n                    \"fontSize\": 24,\r\n                    \"text\": \"Ücretsiz Ürünler\",\r\n                    \"fontWeight\": \"bold\"\r\n                },\r\n                {\r\n                    \"type\": \"dLine\",\r\n                    \"dashWidth\": 4\r\n                },\r\n                {\r\n                    \"type\": \"dSpace\",\r\n                    \"height\": 20\r\n                }\r\n            ]\r\n        ],\r\n        \"BottomPrintibleItems\": [\r\n            [\r\n                {\r\n                    \"type\": \"dSpace\",\r\n                    \"height\": 20\r\n                },\r\n                {\r\n                    \"type\": \"dText\",\r\n                    \"alignment\": \"center\",\r\n                    \"fontSize\": 24,\r\n                    \"text\": \"Ücretsiz Ürünler\",\r\n                    \"fontWeight\": \"bold\"\r\n                },\r\n                {\r\n                    \"type\": \"dLine\",\r\n                    \"dashWidth\": 4\r\n                },\r\n                {\r\n                    \"type\": \"dSpace\",\r\n                    \"height\": 20\r\n                },\r\n                {\r\n                    \"type\": \"dList\",\r\n                    \"children\": [\r\n                        {\r\n                            \"type\": \"dText\",\r\n                            \"alignment\": \"left\",\r\n                            \"text\": \"1 Adet\",\r\n                            \"offset\": 0\r\n                        },\r\n                        {\r\n                            \"type\": \"dText\",\r\n                            \"alignment\": \"right\",\r\n                            \"text\": \"Ketçap\",\r\n                            \"offset\": 0,\r\n                            \"rightMargin\": 134\r\n                        },\r\n                        {\r\n                            \"type\": \"dText\",\r\n                            \"alignment\": \"right\",\r\n                            \"text\": \"0 TL\"\r\n                        }\r\n                    ]\r\n                },\r\n                {\r\n                    \"type\": \"dList\",\r\n                    \"children\": [\r\n                        {\r\n                            \"type\": \"dText\",\r\n                            \"alignment\": \"left\",\r\n                            \"text\": \"1 Adet\",\r\n                            \"offset\": 0\r\n                        },\r\n                        {\r\n                            \"type\": \"dText\",\r\n                            \"alignment\": \"right\",\r\n                            \"text\": \"Mayonez\",\r\n                            \"offset\": 0,\r\n                            \"rightMargin\": 134\r\n                        },\r\n                        {\r\n                            \"type\": \"dText\",\r\n                            \"alignment\": \"right\",\r\n                            \"text\": \"0 TL\"\r\n                        }\r\n                    ]\r\n                },\r\n                {\r\n                    \"type\": \"dList\",\r\n                    \"children\": [\r\n                        {\r\n                            \"type\": \"dText\",\r\n                            \"alignment\": \"left\",\r\n                            \"text\": \"1 Adet\",\r\n                            \"offset\": 0\r\n                        },\r\n                        {\r\n                            \"type\": \"dText\",\r\n                            \"alignment\": \"right\",\r\n                            \"text\": \"Kova Boy Patates\",\r\n                            \"offset\": 0,\r\n                            \"leftMargin\": 200\r\n                        },\r\n                        {\r\n                            \"type\": \"dText\",\r\n                            \"alignment\": \"right\",\r\n                            \"text\": \"0 TL\"\r\n                        }\r\n                    ]\r\n                },\r\n                {\r\n                    \"type\": \"dSpace\",\r\n                    \"height\": 20\r\n                },\r\n                {\r\n                    \"type\": \"dLine\",\r\n                    \"dashWidth\": 15\r\n                },\r\n                {\r\n                    \"type\": \"dText\",\r\n                    \"alignment\": \"center\",\r\n                    \"fontSize\": 24,\r\n                    \"text\": \"TEK SEFERDE YAPACAĞINIZ 500₺ VE ÜZERİ ALIŞVERİŞLERDE 50₺İNDİRİM SİZLERİ BEKLİYOR\"\r\n                }\r\n            ]\r\n        ]\r\n    }\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/CompleteSale",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "CompleteSale"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "CompleteSale Simple",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "\r",
+              "\r",
+              "pm.collectionVariables.set(\"transSeq\",pm.collectionVariables.get(\"transSeq\")+1);\r",
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {
+          "connection": true
+        }
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Connection",
+            "value": "close",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"TransactionHandle\":{\r\n        \"SerialNumber\" :\"N860W6A3461\",\r\n        \"TransactionDate\":\"2023-12-15T18:56:30.310773\",\r\n        \"TransactionSequence\":8,\r\n        \"Fingerprint\":\"test1\"\r\n    },\r\n    \"Sale\": {\r\n        \"RefererApp\": \"Harici Uygulama\",\r\n        \"RefererAppVersion\": \"1.0.0\",\r\n        \"MainDocumentType\": 1,\r\n        \"GrossPrice\": 20,\r\n        \"TotalPrice\": 20,\r\n        \"SendPhoneNotification\": false,\r\n        \"SendEMailNotification\": false,\r\n        \"AddedSaleItems\": [\r\n            {\r\n                \"Name\": \"Gofret\",\r\n                \"IsGeneric\": false,\r\n                \"UnitCode\": \"KGM\",\r\n                \"TaxGroupCode\": \"KDV18\",\r\n                \"ItemQuantity\": 1,\r\n                \"UnitPriceAmount\": 20,\r\n                \"GrossPriceAmount\": 20,\r\n                \"TotalPriceAmount\": 20\r\n            }\r\n        ],\r\n        \"PaymentInformations\": [\r\n            {\r\n                \"Mediator\": 1,\r\n                \"Amount\": 20\r\n            }\r\n        ]\r\n    }\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/CompleteSale",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "CompleteSale"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "InitiateSale",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "\r",
+              "\r",
+              "pm.collectionVariables.set(\"transSeq\",pm.collectionVariables.get(\"transSeq\")+1);\r",
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {
+          "connection": true
+        }
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Connection",
+            "value": "close",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"TransactionHandle\": {\r\n        \"SerialNumber\": \"N500Z000028\",\r\n        \"TransactionDate\": \"2023-11-05T17:25:30.310773\",\r\n        \"TransactionSequence\": 2,\r\n        \"Fingerprint\": \"test1\"\r\n    },\r\n    \"Sale\": {\r\n        \"RefererApp\": \"Harici Uygulama\",\r\n        \"RefererAppVersion\": \"1.0.0\",\r\n        \"OrderNo\": \"0000000000ABC0015\",\r\n        \"MainDocumentType\": 1,\r\n        \"GrossPrice\": 20.0,\r\n        \"TotalPrice\": 20.0,\r\n        \"CurrencyCode\": \"TRY\",\r\n        \"ExchangeRate\": 1.0,\r\n        \"PriceEffect\": {\r\n            \"Type\": 2,\r\n            \"Rate\": 10.0,\r\n            \"Amount\": null\r\n        },\r\n        \"SendPhoneNotification\": false,\r\n        \"SendEMailNotification\": true,\r\n        \"NotificationPhone\": \"\",\r\n        \"NotificationEMail\": \"me@info.com\",\r\n        \"ShowCreditCardMenu\": false,\r\n        \"SelectedSlots\": [\r\n            \"rf\",\r\n            \"icc\",\r\n            \"manual\"\r\n        ],\r\n        \"AllowDismissCardRead\": false,\r\n        \"CardReadTimeout\": 60,\r\n        \"SkipAmountCash\": false,\r\n        \"CancelPaymentLater\": true,\r\n        \"AskCustomer\": false,\r\n        \"SendResponseBeforePrint\": false,\r\n        \"AddedSaleItems\": [\r\n            {\r\n                \"Name\": \"Gofret\",\r\n                \"IsGeneric\": false,\r\n                \"UnitCode\": \"KGM\",\r\n                \"TaxGroupCode\": \"KDV18\",\r\n                \"ItemQuantity\": 1,\r\n                \"UnitPriceAmount\": 20.0,\r\n                \"GrossPriceAmount\": 20.0,\r\n                \"TotalPriceAmount\": 20.0,\r\n                \"ReservedText\": \"TEST0001\",\r\n                \"PriceEffect\": {\r\n                    \"Type\": 1,\r\n                    \"Rate\": 10.0,\r\n                    \"Amount\": null\r\n                }\r\n            }\r\n        ],\r\n        \"PaymentInformations\": [\r\n            {\r\n                \"Mediator\": 2,\r\n                \"Amount\": 16.2,\r\n                \"CurrencyCode\": \"TRY\",\r\n                \"ExchangeRate\": 1.0\r\n            }\r\n        ],\r\n        \"ReceiptInformation\": {\r\n            \"ReceiptImageEnabled\": false,\r\n            \"ReceiptWidth\": \"58mm\",\r\n            \"PrintCustomerReceipt\": true,\r\n            \"PrintCustomerReceiptCopy\": false,\r\n            \"PrintMerchantReceipt\": true,\r\n            \"EnableExchangeRateField\": false\r\n        },\r\n        \"CustomerParty\": {\r\n            \"CustomerType\": 1,\r\n            \"FirstName\": \"John\",\r\n            \"MiddleName\": \"\",\r\n            \"FamilyName\": \"Doe\",\r\n            \"CompanyName\": \"\",\r\n            \"TaxOfficeCode\": \"\",\r\n            \"TaxNumber\": \"11111111111\",\r\n            \"Phone\": \"\",\r\n            \"EMail\": \"\",\r\n            \"Country\": \"Türkiye\",\r\n            \"City\": \"Ankara\",\r\n            \"District\": \"Çankaya\",\r\n            \"Neighborhood\": \"\",\r\n            \"Address\": \"\"\r\n        },\r\n        \"AdditionalInfo\": [\r\n            {\r\n                \"Key\": \"Test\",\r\n                \"Value\": \"Test\",\r\n                \"Print\": true\r\n            }\r\n        ]\r\n    }\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/InitiateSale",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "InitiateSale"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "JewellerySale",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "\r",
+              "\r",
+              "pm.collectionVariables.set(\"transSeq\",pm.collectionVariables.get(\"transSeq\")+1);\r",
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {
+          "connection": true
+        }
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Connection",
+            "value": "close",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"TransactionHandle\": {\r\n        \"SerialNumber\": \"N500Z000028\",\r\n        \"TransactionDate\": \"2023-10-30T10:00:30.310773\",\r\n        \"TransactionSequence\": 3,\r\n        \"Fingerprint\": \"test1\"\r\n    },\r\n    \"Sale\": {\r\n        \"RefererApp\": \"Harici Uygulama\",\r\n        \"RefererAppVersion\": \"1.0.0\",\r\n        \"OrderNo\": \"0000000000ABC0006\",\r\n        \"TotalPrice\": 350,\r\n        \"JewelleryItem\": \"Bilezik\",\r\n        \"TaxGroupCode\": \"805\",\r\n        \"GramPrice\": 15,\r\n        \"GramWeight\": 10,\r\n        \"LaborCostPerGram\": 10,\r\n        \"SingleLaborCost\": 100,\r\n        \"SendPhoneNotification\": false,\r\n        \"SendEMailNotification\": true,\r\n        \"NotificationPhone\": \"\",\r\n        \"NotificationEMail\": \"me@info.com\",\r\n        \"ShowCreditCardMenu\": false,\r\n        \"SkipAmountCash\": false,\r\n        \"AskCustomer\": false,\r\n        \"SendResponseBeforePrint\": false,\r\n        \"PaymentInformations\": [\r\n            {\r\n                \"Mediator\": 1,\r\n                \"Amount\": 150\r\n            },\r\n            {\r\n                \"Mediator\": 2,\r\n                \"Amount\": 200\r\n            }\r\n        ],\r\n        \"ReceiptInformation\": {\r\n            \"ReceiptImageEnabled\": false,\r\n            \"ReceiptWidth\": \"58mm\",\r\n            \"PrintCustomerReceipt\": true,\r\n            \"PrintCustomerReceiptCopy\": false,\r\n            \"PrintMerchantReceipt\": true\r\n        },\r\n        \"CustomerParty\": {\r\n            \"CustomerType\": 1,\r\n            \"FirstName\": \"John\",\r\n            \"MiddleName\": \"\",\r\n            \"FamilyName\": \"Doe\",\r\n            \"CompanyName\": \"\",\r\n            \"TaxOfficeCode\": \"\",\r\n            \"TaxNumber\": \"11111111111\",\r\n            \"Phone\": \"\",\r\n            \"EMail\": \"\",\r\n            \"Country\": \"Türkiye\",\r\n            \"City\": \"Ankara\",\r\n            \"District\": \"Çankaya\",\r\n            \"Neighborhood\": \"\",\r\n            \"Address\": \"\"\r\n        },\r\n        \"AdditionalInfo\": [\r\n            {\r\n                \"Key\": \"Test\",\r\n                \"Value\": \"Test\",\r\n                \"Print\": true\r\n            }\r\n        ]\r\n    }\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/JewellerySale",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "JewellerySale"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "AdvanceSale",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "\r",
+              "\r",
+              "pm.collectionVariables.set(\"transSeq\",pm.collectionVariables.get(\"transSeq\")+1);\r",
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {
+          "connection": true
+        }
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Connection",
+            "value": "close",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"TransactionHandle\": {\r\n        \"SerialNumber\": \"N500Z000028\",\r\n        \"TransactionDate\": \"2023-10-30T10:46:30.310773\",\r\n        \"TransactionSequence\": 5,\r\n        \"Fingerprint\": \"test1\"\r\n    },\r\n    \"Sale\": {\r\n        \"RefererApp\": \"Harici Uygulama\",\r\n        \"RefererAppVersion\": \"1.0.0\",\r\n        \"OrderNo\": \"0000000000ABC0007\",\r\n        \"TotalAmount\": 100,\r\n        \"SaleReason\": \"Test\",\r\n        \"SendPhoneNotification\": false,\r\n        \"SendEMailNotification\": true,\r\n        \"NotificationPhone\": \"\",\r\n        \"NotificationEMail\": \"me@info.com\",\r\n        \"ShowCreditCardMenu\": false,\r\n        \"SkipAmountCash\": false,\r\n        \"AskCustomer\": false,\r\n        \"SendResponseBeforePrint\": false,\r\n        \"PaymentInformations\": [\r\n            {\r\n                \"Mediator\": 1,\r\n                \"Amount\": 100\r\n            }\r\n        ],\r\n        \"ReceiptInformation\": {\r\n            \"ReceiptImageEnabled\": false,\r\n            \"ReceiptWidth\": \"58mm\",\r\n            \"PrintCustomerReceipt\": true,\r\n            \"PrintCustomerReceiptCopy\": false,\r\n            \"PrintMerchantReceipt\": true\r\n        },\r\n        \"CustomerParty\": {\r\n            \"CustomerType\": 1,\r\n            \"FirstName\": \"John\",\r\n            \"MiddleName\": \"\",\r\n            \"FamilyName\": \"Doe\",\r\n            \"CompanyName\": \"\",\r\n            \"TaxOfficeCode\": \"\",\r\n            \"TaxNumber\": \"11111111111\",\r\n            \"Phone\": \"\",\r\n            \"EMail\": \"\",\r\n            \"Country\": \"Türkiye\",\r\n            \"City\": \"Ankara\",\r\n            \"District\": \"Çankaya\",\r\n            \"Neighborhood\": \"\",\r\n            \"Address\": \"\"\r\n        }\r\n    }\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/AdvanceSale",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "AdvanceSale"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "CurrentSale",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "\r",
+              "\r",
+              "pm.collectionVariables.set(\"transSeq\",pm.collectionVariables.get(\"transSeq\")+1);\r",
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {
+          "connection": true
+        }
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Connection",
+            "value": "close",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"TransactionHandle\": {\r\n        \"SerialNumber\": \"N500Z000028\",\r\n        \"TransactionDate\": \"2023-10-30T12:02:30.310773\",\r\n        \"TransactionSequence\": 10,\r\n        \"Fingerprint\": \"test1\"\r\n    },\r\n    \"Sale\": {\r\n        \"RefererApp\": \"Harici Uygulama\",\r\n        \"RefererAppVersion\": \"1.0.0\",\r\n        \"OrderNo\": \"0000000000ABC0008\",\r\n        \"TotalAmount\": 100,\r\n        \"SaleReason\": \"Test\",\r\n        \"InvoiceData\": [\r\n            {\r\n                \"InvoiceNo\": \"XXX123\",\r\n                \"InvoiceDate\": \"2023-07-26\"\r\n            },\r\n            {\r\n                \"InvoiceNo\": \"YYY123\",\r\n                \"InvoiceDate\": \"2023-07-26\"\r\n            }\r\n        ],\r\n        \"SendPhoneNotification\": false,\r\n        \"SendEMailNotification\": true,\r\n        \"NotificationPhone\": \"\",\r\n        \"NotificationEMail\": \"me@info.com\",\r\n        \"ShowCreditCardMenu\": false,\r\n        \"SkipAmountCash\": false,\r\n        \"AskCustomer\": false,\r\n        \"SendResponseBeforePrint\": false,\r\n        \"PaymentInformations\": [\r\n            {\r\n                \"Mediator\": 1,\r\n                \"Amount\": 100\r\n            }\r\n        ],\r\n        \"ReceiptInformation\": {\r\n            \"ReceiptImageEnabled\": false,\r\n            \"ReceiptWidth\": \"58mm\",\r\n            \"PrintCustomerReceipt\": true,\r\n            \"PrintCustomerReceiptCopy\": false,\r\n            \"PrintMerchantReceipt\": true\r\n        },\r\n        \"CustomerParty\": {\r\n            \"CustomerType\": 1,\r\n            \"FirstName\": \"John\",\r\n            \"MiddleName\": \"\",\r\n            \"FamilyName\": \"Doe\",\r\n            \"CompanyName\": \"\",\r\n            \"TaxOfficeCode\": \"\",\r\n            \"TaxNumber\": \"11111111111\",\r\n            \"Phone\": \"\",\r\n            \"EMail\": \"\",\r\n            \"Country\": \"Türkiye\",\r\n            \"City\": \"Ankara\",\r\n            \"District\": \"Çankaya\",\r\n            \"Neighborhood\": \"\",\r\n            \"Address\": \"\"\r\n        }\r\n    }\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/CurrentSale",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "CurrentSale"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "RestaurantSale",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "\r",
+              "\r",
+              "pm.collectionVariables.set(\"transSeq\",pm.collectionVariables.get(\"transSeq\")+1);\r",
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {
+          "connection": true
+        }
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Connection",
+            "value": "close",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"TransactionHandle\": {\r\n        \"SerialNumber\": \"N500Z000028\",\r\n        \"TransactionDate\": \"2023-11-16T15:41:30.310773\",\r\n        \"TransactionSequence\": 19,\r\n        \"Fingerprint\": \"test1\"\r\n    },\r\n    \"Sale\": {\r\n        \"AdisyonName\": \"Harici Adisyon\",\r\n        \"AdisyonTableName\": \"Harici Masa\",\r\n        \"AdisyonStaffName\": \"Harici Garson\",\r\n        \"AdisyonOpenTime\": \"2023-11-16T15:41:30.310773\",\r\n        \"RefererApp\": \"Harici Uygulama\",\r\n        \"RefererAppVersion\": \"1.0.0\",\r\n        \"OrderNo\": \"0000000000ABC0057\",\r\n        \"GrossPrice\": 20,\r\n        \"TotalPrice\": 20,\r\n        \"CurrencyCode\": \"TRY\",\r\n        \"ExchangeRate\": 1,\r\n        \"PriceEffect\": {\r\n            \"Type\": 2,\r\n            \"Rate\": 10,\r\n            \"Amount\": null\r\n        },\r\n        \"SendPhoneNotification\": false,\r\n        \"SendEMailNotification\": true,\r\n        \"NotificationPhone\": \"\",\r\n        \"NotificationEMail\": \"me@info.com\",\r\n        \"SkipAmountCash\": false,\r\n        \"CancelPaymentLater\": true,\r\n        \"AskCustomer\": false,\r\n        \"SendResponseBeforePrint\": false,\r\n        \"AddedSaleItems\": [\r\n            {\r\n                \"Name\": \"Döner\",\r\n                \"IsGeneric\": false,\r\n                \"UnitCode\": \"KGM\",\r\n                \"TaxGroupCode\": \"KDV18\",\r\n                \"ItemQuantity\": 1,\r\n                \"UnitPriceAmount\": 20,\r\n                \"GrossPriceAmount\": 20,\r\n                \"TotalPriceAmount\": 20,\r\n                \"ReservedText\": \"TEST0001\",\r\n                \"PriceEffect\": {\r\n                    \"Type\": 1,\r\n                    \"Rate\": 10,\r\n                    \"Amount\": null\r\n                }\r\n            }\r\n        ],\r\n        \"PaymentInformations\": [\r\n            {\r\n                \"Mediator\": 2,\r\n                \"Amount\": 16.2,\r\n                \"CurrencyCode\": \"TRY\",\r\n                \"ExchangeRate\": 1\r\n            }\r\n        ],\r\n        \"ReceiptInformation\": {\r\n            \"ReceiptImageEnabled\": false,\r\n            \"ReceiptWidth\": \"58mm\",\r\n            \"PrintCustomerReceipt\": true,\r\n            \"PrintCustomerReceiptCopy\": false,\r\n            \"PrintMerchantReceipt\": true,\r\n            \"EnableExchangeRateField\": false\r\n        },\r\n        \"CustomerParty\": {\r\n            \"CustomerType\": 1,\r\n            \"FirstName\": \"John\",\r\n            \"MiddleName\": \"\",\r\n            \"FamilyName\": \"Doe\",\r\n            \"CompanyName\": \"\",\r\n            \"TaxOfficeCode\": \"\",\r\n            \"TaxNumber\": \"11111111111\",\r\n            \"Phone\": \"\",\r\n            \"EMail\": \"\",\r\n            \"Country\": \"Türkiye\",\r\n            \"City\": \"Ankara\",\r\n            \"District\": \"Çankaya\",\r\n            \"Neighborhood\": \"\",\r\n            \"Address\": \"\"\r\n        },\r\n        \"AdditionalInfo\": [\r\n            {\r\n                \"Key\": \"Test\",\r\n                \"Value\": \"Test\",\r\n                \"Print\": true\r\n            }\r\n        ]\r\n    }\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/RestaurantSale",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "RestaurantSale"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "StartMultiPaymentSale",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "\r",
+              "\r",
+              "pm.collectionVariables.set(\"transSeq\",pm.collectionVariables.get(\"transSeq\")+1);\r",
+              ""
+            ],
+            "type": "text/javascript",
+            "packages": {}
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {
+          "connection": true
+        }
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Connection",
+            "value": "close",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"TransactionHandle\": {\r\n        \"SerialNumber\": \"N500Z000028\",\r\n        \"TransactionDate\": \"2024-10-11T12:41:30.310773\",\r\n        \"TransactionSequence\": 9,\r\n        \"Fingerprint\": \"test1\"\r\n    },\r\n    \"Sale\": {\r\n        \"RefererApp\": \"Harici Uygulama\",\r\n        \"RefererAppVersion\": \"1.0.0\",\r\n        \"OrderNo\": \"0000000000ABC0003\",\r\n        \"MainDocumentType\": 1,\r\n        \"GrossPrice\": 20,\r\n        \"TotalPrice\": 20,\r\n        \"CurrencyCode\": \"TRY\",\r\n        \"ExchangeRate\": 1,\r\n        \"PriceEffect\": {\r\n            \"Type\": 2,\r\n            \"Rate\": 10,\r\n            \"Amount\": null\r\n        },\r\n        \"SendPhoneNotification\": false,\r\n        \"SendEMailNotification\": true,\r\n        \"NotificationPhone\": \"\",\r\n        \"NotificationEMail\": \"me@info.com\",\r\n        \"ShowCreditCardMenu\": false,\r\n        \"CancelPaymentLater\": true,\r\n        \"AddedSaleItems\": [\r\n            {\r\n                \"Name\": \"Gofret\",\r\n                \"IsGeneric\": false,\r\n                \"UnitCode\": \"KGM\",\r\n                \"TaxGroupCode\": \"KDV18\",\r\n                \"ItemQuantity\": 1,\r\n                \"UnitPriceAmount\": 20,\r\n                \"GrossPriceAmount\": 20,\r\n                \"TotalPriceAmount\": 20,\r\n                \"ReservedText\": \"TEST0001\",\r\n                \"PriceEffect\": {\r\n                    \"Type\": 1,\r\n                    \"Rate\": 10,\r\n                    \"Amount\": null\r\n                }\r\n            }\r\n        ],\r\n        \"CustomerParty\": {\r\n            \"CustomerType\": 1,\r\n            \"FirstName\": \"John\",\r\n            \"MiddleName\": \"\",\r\n            \"FamilyName\": \"Doe\",\r\n            \"CompanyName\": \"\",\r\n            \"TaxOfficeCode\": \"\",\r\n            \"TaxNumber\": \"11111111111\",\r\n            \"Phone\": \"\",\r\n            \"EMail\": \"\",\r\n            \"Country\": \"Türkiye\",\r\n            \"City\": \"Ankara\",\r\n            \"District\": \"Çankaya\",\r\n            \"Neighborhood\": \"\",\r\n            \"Address\": \"\"\r\n        },\r\n        \"AdditionalInfo\": [\r\n            {\r\n                \"Key\": \"Test\",\r\n                \"Value\": \"Test\",\r\n                \"Print\": true\r\n            }\r\n        ]\r\n    }\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/StartMultiPaymentSale",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "StartMultiPaymentSale"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "AddPayment",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "\r",
+              "\r",
+              "pm.collectionVariables.set(\"transSeq\",pm.collectionVariables.get(\"transSeq\")+1);\r",
+              ""
+            ],
+            "type": "text/javascript",
+            "packages": {}
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {
+          "connection": true
+        }
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Connection",
+            "value": "close",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"TransactionHandle\": {\r\n        \"SerialNumber\": \"N500Z000028\",\r\n        \"TransactionDate\": \"2024-11-27T12:41:30.310773\",\r\n        \"TransactionSequence\": 9,\r\n        \"Fingerprint\": \"test1\"\r\n    },\r\n    \"Sale\": {\r\n        \"OrderNo\": \"0000000000ABC0003\",\r\n        \"GrossPrice\": 20,\r\n        \"ShowCreditCardMenu\": false,\r\n        \"SelectedSlots\": [\r\n            \"rf\",\r\n            \"icc\",\r\n            \"manual\"\r\n        ],\r\n        \"AllowDismissCardRead\": false,\r\n        \"CardReadTimeout\": 30,\r\n        \"SkipAmountCash\": false,\r\n        \"SendResponseBeforePrint\": false,\r\n        \"PaymentInformations\": [\r\n            {\r\n                \"Mediator\": 2,\r\n                \"Amount\": 6.2\r\n            }\r\n        ],\r\n        \"ReceiptInformation\": {\r\n            \"ReceiptImageEnabled\": true,\r\n            \"ReceiptWidth\": \"58mm\",\r\n            \"PrintCustomerReceipt\": true,\r\n            \"PrintCustomerReceiptCopy\": true,\r\n            \"PrintMerchantReceipt\": true,\r\n            \"EnableExchangeRateField\": true\r\n        },\r\n        \"TopPrintibleItems\": [\r\n            [\r\n                {\r\n                    \"type\": \"dSpace\",\r\n                    \"height\": 20\r\n                },\r\n                {\r\n                    \"type\": \"dText\",\r\n                    \"alignment\": \"center\",\r\n                    \"fontSize\": 24,\r\n                    \"text\": \"Ücretsiz Ürünler\",\r\n                    \"fontWeight\": \"bold\"\r\n                },\r\n                {\r\n                    \"type\": \"dLine\",\r\n                    \"dashWidth\": 4\r\n                },\r\n                {\r\n                    \"type\": \"dSpace\",\r\n                    \"height\": 20\r\n                }\r\n            ]\r\n        ],\r\n        \"BottomPrintibleItems\": [\r\n            [\r\n                {\r\n                    \"type\": \"dSpace\",\r\n                    \"height\": 20\r\n                },\r\n                {\r\n                    \"type\": \"dText\",\r\n                    \"alignment\": \"center\",\r\n                    \"fontSize\": 24,\r\n                    \"text\": \"Ücretsiz Ürünler\",\r\n                    \"fontWeight\": \"bold\"\r\n                },\r\n                {\r\n                    \"type\": \"dLine\",\r\n                    \"dashWidth\": 4\r\n                },\r\n                {\r\n                    \"type\": \"dSpace\",\r\n                    \"height\": 20\r\n                },\r\n                {\r\n                    \"type\": \"dList\",\r\n                    \"children\": [\r\n                        {\r\n                            \"type\": \"dText\",\r\n                            \"alignment\": \"left\",\r\n                            \"text\": \"1 Adet\",\r\n                            \"offset\": 0\r\n                        },\r\n                        {\r\n                            \"type\": \"dText\",\r\n                            \"alignment\": \"right\",\r\n                            \"text\": \"Ketçap\",\r\n                            \"offset\": 0,\r\n                            \"rightMargin\": 134\r\n                        },\r\n                        {\r\n                            \"type\": \"dText\",\r\n                            \"alignment\": \"right\",\r\n                            \"text\": \"0 TL\"\r\n                        }\r\n                    ]\r\n                },\r\n                {\r\n                    \"type\": \"dList\",\r\n                    \"children\": [\r\n                        {\r\n                            \"type\": \"dText\",\r\n                            \"alignment\": \"left\",\r\n                            \"text\": \"1 Adet\",\r\n                            \"offset\": 0\r\n                        },\r\n                        {\r\n                            \"type\": \"dText\",\r\n                            \"alignment\": \"right\",\r\n                            \"text\": \"Mayonez\",\r\n                            \"offset\": 0,\r\n                            \"rightMargin\": 134\r\n                        },\r\n                        {\r\n                            \"type\": \"dText\",\r\n                            \"alignment\": \"right\",\r\n                            \"text\": \"0 TL\"\r\n                        }\r\n                    ]\r\n                },\r\n                {\r\n                    \"type\": \"dList\",\r\n                    \"children\": [\r\n                        {\r\n                            \"type\": \"dText\",\r\n                            \"alignment\": \"left\",\r\n                            \"text\": \"1 Adet\",\r\n                            \"offset\": 0\r\n                        },\r\n                        {\r\n                            \"type\": \"dText\",\r\n                            \"alignment\": \"right\",\r\n                            \"text\": \"Kova Boy Patates\",\r\n                            \"offset\": 0,\r\n                            \"leftMargin\": 200\r\n                        },\r\n                        {\r\n                            \"type\": \"dText\",\r\n                            \"alignment\": \"right\",\r\n                            \"text\": \"0 TL\"\r\n                        }\r\n                    ]\r\n                },\r\n                {\r\n                    \"type\": \"dSpace\",\r\n                    \"height\": 20\r\n                },\r\n                {\r\n                    \"type\": \"dLine\",\r\n                    \"dashWidth\": 15\r\n                },\r\n                {\r\n                    \"type\": \"dText\",\r\n                    \"alignment\": \"center\",\r\n                    \"fontSize\": 24,\r\n                    \"text\": \"TEK SEFERDE YAPACAĞINIZ 500₺ VE ÜZERİ ALIŞVERİŞLERDE 50₺İNDİRİM SİZLERİ BEKLİYOR\"\r\n                }\r\n            ]\r\n        ]\r\n    }\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/AddPayment",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "AddPayment"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "AbandonSuspendedSale",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"TransactionHandle\": {\r\n        \"SerialNumber\": \"N500Z000028\",\r\n        \"TransactionDate\": \"2024-10-11T13:25:30.310773\",\r\n        \"TransactionSequence\": 16,\r\n        \"Fingerprint\": \"test1\"\r\n    },\r\n    \"Sale\": {\r\n        \"OrderNo\": \"0000000000ABC0003\",\r\n        \"IsVoid\": true,\r\n        \"ReceiptInformation\": {\r\n            \"ReceiptImageEnabled\": false,\r\n            \"ReceiptWidth\": \"58mm\",\r\n            \"PrintCustomerReceipt\": true,\r\n            \"PrintCustomerReceiptCopy\": false,\r\n            \"PrintMerchantReceipt\": true\r\n        }\r\n    }\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/AbandonSuspendedSale",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "AbandonSuspendedSale"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "CancelSale",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"TransactionHandle\": {\r\n        \"SerialNumber\": \"N500Z000028\",\r\n        \"TransactionDate\": \"2023-10-30T13:25:30.310773\",\r\n        \"TransactionSequence\": 16,\r\n        \"Fingerprint\": \"test1\"\r\n    },\r\n    \"Sale\": {\r\n        //\"Id\": 128813,\r\n        \"InvoiceNo\": \"ARV2023000002299\",\r\n        //\"OrderNo\": \"0000000000ABC0009\",\r\n        //\"IsVoid\": true,\r\n        \"ReceiptInformation\": {\r\n            \"ReceiptImageEnabled\": false,\r\n            \"ReceiptWidth\": \"58mm\",\r\n            \"PrintCustomerReceipt\": true,\r\n            \"PrintCustomerReceiptCopy\": false,\r\n            \"PrintMerchantReceipt\": true\r\n        }\r\n    }\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/CancelSale",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "CancelSale"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "InitiateCancellation",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"TransactionHandle\": {\r\n        \"SerialNumber\": \"N500Z000028\",\r\n        \"TransactionDate\": \"2023-10-30T13:25:30.310773\",\r\n        \"TransactionSequence\": 16,\r\n        \"Fingerprint\": \"test1\"\r\n    },\r\n    \"Sale\": {\r\n        \"OrderNo\": \"0000000000ABC0003\"\r\n    }\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/InitiateCancellation",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "InitiateCancellation"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "AbortCurrentPayment",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"TransactionHandle\": {\n        \"SerialNumber\": \"N500Z000028\",\n        \"TransactionDate\": \"2023-10-30T11:20:30.310773\",\n        \"TransactionSequence\": 7,\n        \"Fingerprint\": \"test1\"\n    }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/AbortCurrentPayment",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "AbortCurrentPayment"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "CompletedSale",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"TransactionHandle\": {\r\n        \"SerialNumber\": \"N500Z000028\",\r\n        \"TransactionDate\": \"2023-10-30T15:03:30.310773\",\r\n        \"TransactionSequence\": 22,\r\n        \"Fingerprint\": \"test1\"\r\n    },\r\n    \"Sale\": {\r\n        //\"Id\": 128826,\r\n        \"OrderNo\": \"0000000000ABC0010\"\r\n        //\"SaleNumber\": \"QL3021827231786\"\r\n    }\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/CompletedSale",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "CompletedSale"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "CheckPendingSale",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"TransactionHandle\": {\r\n        \"SerialNumber\": \"N500Z000028\",\r\n        \"TransactionDate\": \"2024-11-30T15:03:30.310773\",\r\n        \"TransactionSequence\": 22,\r\n        \"Fingerprint\": \"test1\"\r\n    },\r\n    \"Sale\": {\r\n        \"OrderNo\": \"0000000000ABC0010\"\r\n    }\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/CheckPendingSale",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "CheckPendingSale"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "GetSaleResult",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"TransactionHandle\": {\r\n        \"SerialNumber\": \"N500Z000028\",\r\n        \"TransactionDate\": \"2023-11-05T18:49:30.310773\",\r\n        \"TransactionSequence\": 7,\r\n        \"Fingerprint\": \"test1\"\r\n    },\r\n    \"Sale\": {\r\n        \"OrderNo\": \"0000000000ABC0015\"\r\n    }\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/GetSaleResult",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "GetSaleResult"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "GetCancellationResult",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"TransactionHandle\": {\r\n        \"SerialNumber\": \"N500Z000028\",\r\n        \"TransactionDate\": \"2023-11-05T18:49:30.310773\",\r\n        \"TransactionSequence\": 7,\r\n        \"Fingerprint\": \"test1\"\r\n    },\r\n    \"Sale\": {\r\n        \"OrderNo\": \"0000000000ABC0015\"\r\n    }\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/GetSaleResult",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "GetSaleResult"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "LastProcessedSale",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"TransactionHandle\": {\r\n        \"SerialNumber\": \"N500Z000028\",\r\n        \"TransactionDate\": \"2023-11-05T19:13:30.310773\",\r\n        \"TransactionSequence\": 13,\r\n        \"Fingerprint\": \"test1\"\r\n    }\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/LastProcessedSale",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "LastProcessedSale"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"TransactionHandle\": {\r\n        \"SerialNumber\": \"N500Z000028\",\r\n        \"TransactionDate\": \"2023-10-30T15:34:30.310773\",\r\n        \"TransactionSequence\": 24,\r\n        \"Fingerprint\": \"test1\"\r\n    },\r\n    \"LoginInfo\": {\r\n        \"UserName\": \"erdal\",\r\n        \"Password\": \"Erdal*1234\",\r\n        \"EnabledOTPVerification\": false\r\n    }\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/Login",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "Login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "LoginWithPin",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"TransactionHandle\": {\r\n        \"SerialNumber\": \"N500Z000028\",\r\n        \"TransactionDate\": \"2023-10-30T16:12:30.310773\",\r\n        \"TransactionSequence\": 26,\r\n        \"Fingerprint\": \"test1\"\r\n    },\r\n    \"LoginInfo\": {\r\n        \"UserName\": \"erdal\",\r\n        \"Pin\": \"123123\"\r\n    }\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/LoginWithPin",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "LoginWithPin"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Logout",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"TransactionHandle\": {\r\n        \"SerialNumber\": \"N500Z000028\",\r\n        \"TransactionDate\": \"2024-04-16T10:50:30.310773\",\r\n        \"TransactionSequence\": 2,\r\n        \"Fingerprint\": \"test1\"\r\n    }\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/Logout",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "Logout"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "SendOfflineSales",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"TransactionHandle\":{\n        \"SerialNumber\" :\"N500Z000028\",\n        \"TransactionDate\":\"2023-10-24T10:40:30.310773\",\n        \"TransactionSequence\":17,\n        \"Fingerprint\":\"test1\"\n    }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/SendOfflineSales",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "SendOfflineSales"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "UpdateTerminalData",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"TransactionHandle\":{\n        \"SerialNumber\" :\"N500Z000028\",\n        \"TransactionDate\":\"2023-10-24T10:40:30.310773\",\n        \"TransactionSequence\":17,\n        \"Fingerprint\":\"test1\"\n    }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/UpdateTerminalData",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "UpdateTerminalData"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "PerformBatchEod",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"TransactionHandle\": {\n        \"SerialNumber\": \"N500Z000028\",\n        \"TransactionDate\": \"2024-04-16T11:10:30.310773\",\n        \"TransactionSequence\": 6,\n        \"Fingerprint\": \"test1\"\n    },\n    \"Sale\": {\n        \"MediatorId\": 2\n    }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/PerformBatchEod",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "PerformBatchEod"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "PerformEOD",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"PerformEOD\": {\n        \"AdditionalInfo\": {\n            \"print\": true,\n            \"receiptImage\": true,\n            \"useSummary\": true,\n            \"receiptWidth\": \"58mm\",\n            \"headUnmaskLength\": 4,\n            \"tailUnmaskLength\": 4\n        }  \n    },\n   \"TransactionHandle\":{\n        \"SerialNumber\" :\"N500Z000028\",\n        \"TransactionDate\":\"2023-10-24T10:30:30.310773\",\n        \"TransactionSequence\":15,\n        \"Fingerprint\":\"test1\"\n    }\n    \n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/PerformEOD",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "PerformEOD"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "PerformIsposEod",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n   \"TransactionHandle\": {\n        \"SerialNumber\": \"N500Z000028\",\n        \"TransactionDate\": \"2024-02-26T12:05:30.310773\",\n        \"TransactionSequence\": 23,\n        \"Fingerprint\": \"test1\"\n    }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/PerformIsposEod",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "PerformIsposEod"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "GetDeviceInfo",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"TransactionHandle\": {\n        \"SerialNumber\": \"N500Z000028\",\n        \"TransactionDate\": \"2023-10-30T20:47:30.310773\",\n        \"TransactionSequence\": 36,\n        \"Fingerprint\": \"test1\"\n    },\n    \"DeviceInfo\": {\n        \"AdditionalInfo\": {\n            \"serialNumber\": true,\n            \"fingerPrint\": true,\n            \"terminalSettings\": true,\n            \"listTerminals\": true\n        }\n    }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/GetDeviceInfo",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "GetDeviceInfo"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "GetTurmobInfo",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"TransactionHandle\": {\n        \"SerialNumber\": \"N500Z000028\",\n        \"TransactionDate\": \"2024-01-12T16:45:30.310773\",\n        \"TransactionSequence\": 3,\n        \"Fingerprint\": \"test1\"\n    },\n    \"TurmobInput\": {\n        \"Tckn\": \"3395XXXXXXX\"\n    }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/GetTurmobInfo",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "GetTurmobInfo"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "PaymentMediators",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"TransactionHandle\": {\n        \"SerialNumber\": \"N500Z000028\",\n        \"TransactionDate\": \"2023-10-30T21:36:30.310773\",\n        \"TransactionSequence\": 42,\n        \"Fingerprint\": \"test1\"\n    }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/PaymentMediators",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "PaymentMediators"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "PrintOut",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"TransactionHandle\": {\r\n        \"SerialNumber\": \"N500Z000028\",\r\n        \"TransactionDate\": \"2023-10-30T23:20:30.310773\",\r\n        \"TransactionSequence\": 43,\r\n        \"Fingerprint\": \"test1\"\r\n    },\r\n    \"Print\": {\r\n        \"Image\": \"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\"\r\n    }\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{url}}/PrintOut",
+          "host": [
+            "{{url}}"
+          ],
+          "path": [
+            "PrintOut"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "url",
+      "value": "https://192.168.1.150:4567"
+    },
+    {
+      "key": "transSeq",
+      "value": ""
+    }
+  ]
+}
