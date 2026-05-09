@@ -21,6 +21,7 @@ namespace QRMENUE
 
         int Mouse_X, Mouse_Y, Movee;
         private bool _loginInProgress;
+        private string _deviceId;
 
         public LoginForm()
         {
@@ -102,6 +103,7 @@ namespace QRMENUE
                     txtCompanyCode.Text = config.CompanyCode;
                     txtUserName.Text = config.Username;
                     txtPassword.Text = config.Password;
+                    _deviceId = config.DeviceId;
                     // config.json yalnızca "Beni hatırla" ile girişte yazılıyor; alanlar doluysa kutuyu ve ikonu eşitle
                     if (!string.IsNullOrWhiteSpace(config.Username)
                         || !string.IsNullOrWhiteSpace(config.CompanyCode)
@@ -114,6 +116,11 @@ namespace QRMENUE
             }
             catch
             { }
+
+            if (string.IsNullOrEmpty(_deviceId))
+            {
+                _deviceId = Guid.NewGuid().ToString();
+            }
 
             try
             {
@@ -305,6 +312,7 @@ namespace QRMENUE
                     parameters.Add("password", txtPassword.Text);
                     parameters.Add("remember_me", chkRememberMe.Checked ? 1 : 0);
                     parameters.Add("platform", 5); // 5 = Kiosk
+                    parameters.Add("device_id", _deviceId);
 
                     string loginUrl = AppDataLoader.GetApiUrl("api/exe/login");
                     if (string.IsNullOrEmpty(loginUrl))
@@ -316,7 +324,7 @@ namespace QRMENUE
 
 #if DEBUG
                     System.Diagnostics.Debug.WriteLine("[LOGIN] İstek URL: " + loginUrl);
-                    System.Diagnostics.Debug.WriteLine("[LOGIN] Gönderilen: company_code=" + txtCompanyCode.Text.Trim() + ", nick_name=" + txtUserName.Text.Trim() + ", remember_me=" + (chkRememberMe.Checked ? 1 : 0) + ", platform=5");
+                    System.Diagnostics.Debug.WriteLine("[LOGIN] Gönderilen: company_code=" + txtCompanyCode.Text.Trim() + ", nick_name=" + txtUserName.Text.Trim() + ", remember_me=" + (chkRememberMe.Checked ? 1 : 0) + ", platform=5, device_id=" + _deviceId);
 #endif
                     string json = Helpers.HttpHelper(loginUrl, "POST", parameters);
 #if DEBUG
@@ -348,16 +356,19 @@ namespace QRMENUE
                         FirmaID = apiRes.DataList.FirmaID.ToString()
                     };
 
-                    if (chkRememberMe.Checked)
+                    var configToSave = new ConfigDTO
                     {
-                        StringBuilder sb = new StringBuilder();
-                        sb.AppendFormat("{{ \"Username\" : \"{0}\"", txtUserName.Text);
-                        sb.AppendFormat(", \"Password\" : \"{0}\" ", txtPassword.Text);
-                        sb.AppendFormat(", \"CompanyCode\" : \"{0}\" }}", txtCompanyCode.Text);
+                        DeviceId = _deviceId,
+                        Username = chkRememberMe.Checked ? txtUserName.Text : "",
+                        Password = chkRememberMe.Checked ? txtPassword.Text : "",
+                        CompanyCode = chkRememberMe.Checked ? txtCompanyCode.Text : ""
+                    };
+                    try
+                    {
                         Directory.CreateDirectory(AppPaths.WritableDataDirectory);
-                        using (StreamWriter sw = new StreamWriter(AppPaths.ConfigJsonPath, false))
-                            sw.WriteLine(sb.ToString());
+                        File.WriteAllText(AppPaths.ConfigJsonPath, new JavaScriptSerializer().Serialize(configToSave));
                     }
+                    catch { }
 
                     var main = new MainForm(logRes.FirmaID, logRes);
                     this.Hide();

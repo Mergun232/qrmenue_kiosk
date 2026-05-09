@@ -463,16 +463,28 @@ namespace Qrmenue
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (isSafeClose)
+            // Kullanıcı menüden 'Çıkış' demişse veya Windows kapanıyorsa veya Application.Exit çağrılmışsa
+            if (isSafeClose || e.CloseReason == CloseReason.WindowsShutDown || e.CloseReason == CloseReason.ApplicationExitCall)
             {
-                _socketService?.Disconnect();
-                _socketLogForm?.Close();
-                e.Cancel = true;
+                try
+                {
+                    if (notifyIcon != null)
+                    {
+                        notifyIcon.Visible = false;
+                        notifyIcon.Icon?.Dispose();
+                        notifyIcon.Dispose();
+                    }
+                    _socketService?.Disconnect();
+                    _socketLogForm?.Close();
+                }
+                catch { }
+                // Kapanmaya izin ver
             }
             else
             {
-                this.allowshowdisplay = true;
-                this.Visible = !this.Visible;
+                // X butonuna basılmışsa kapatma, sadece gizle
+                e.Cancel = true;
+                this.Visible = false;
             }
         }
 

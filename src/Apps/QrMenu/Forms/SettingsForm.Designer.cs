@@ -16,10 +16,13 @@ namespace QRMENUE
         private void InitializeComponent()
         {
             this.SuspendLayout();
+            // 
+            // SettingsForm
+            // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.White;
-            this.ClientSize = new System.Drawing.Size(500, 420);
+            this.ClientSize = new System.Drawing.Size(500, 511);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
@@ -28,6 +31,7 @@ namespace QRMENUE
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
             this.Text = "Ayarlar";
             this.ResumeLayout(false);
+
         }
     }
 }

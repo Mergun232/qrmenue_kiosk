@@ -116,6 +116,8 @@ namespace QRMENUE
 
             y += AddLanguageCard(_scrollHost, insetL, y, contentW, gap, d);
 
+            y += AddExitButton(_scrollHost, insetL, y, contentW, gap, d);
+
             Controls.Add(_scrollHost);
             Controls.Add(_header);
 
@@ -238,6 +240,44 @@ namespace QRMENUE
             };
             b.FlatAppearance.BorderSize = 1;
             return b;
+        }
+
+        private int AddExitButton(Panel host, int left, int y, int cardW, int gap, AppDataDTO d)
+        {
+            int h = 52;
+            var btn = new Button
+            {
+                Text = "Uygulamayı Kapat",
+                Location = new Point(left, y),
+                Size = new Size(cardW, h),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI Semibold", 11f),
+                BackColor = Color.FromArgb(231, 76, 60),
+                ForeColor = Color.White,
+                Cursor = Cursors.Hand,
+                TabStop = true,
+                UseVisualStyleBackColor = false
+            };
+            btn.FlatAppearance.BorderSize = 0;
+            btn.Click += (s, e) =>
+            {
+                var msg = "Uygulamayı kapatmak istediğinize emin misiniz?";
+                var title = "Uygulamayı Kapat";
+                if (_model != null)
+                {
+                    // Varsa mevcut çevirileri kullanmaya çalışalım, yoksa varsayılan
+                    if (_model.UiLanguage == "DE") { msg = "Möchten Sie die Anwendung wirklich schließen?"; title = "Anwendung schließen"; }
+                    else if (_model.UiLanguage == "EN") { msg = "Are you sure you want to close the application?"; title = "Close Application"; }
+                    else if (_model.UiLanguage == "FR") { msg = "Voulez-vous vraiment fermer l'application?"; title = "Fermer l'application"; }
+                }
+
+                if (MessageBox.Show(msg, title, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                {
+                    Application.Exit();
+                }
+            };
+            host.Controls.Add(btn);
+            return h + gap;
         }
 
         private void Card_OnPaint(object sender, PaintEventArgs e)
