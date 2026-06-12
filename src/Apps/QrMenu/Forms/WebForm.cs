@@ -188,6 +188,29 @@ namespace WebBrowser
                             SendResponseToJs(action + "_Response", true, parsedRes, null, reqId);
                         });
                     }
+                    else if (action == "PrintRequest")
+                    {
+                        System.Threading.Tasks.Task.Run(async () =>
+                        {
+                            try
+                            {
+                                var mainForm = Qrmenue.MainForm.Instance;
+                                if (mainForm != null)
+                                {
+                                    await mainForm.CheckPrintablesAsync();
+                                    SendResponseToJs(action + "_Response", true, "PrintRequest triggered", null, reqId);
+                                }
+                                else
+                                {
+                                    SendResponseToJs(action + "_Response", false, null, "MainForm instance not found", reqId);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                SendResponseToJs(action + "_Response", false, null, ex.Message, reqId);
+                            }
+                        });
+                    }
                 }
             }
             catch (Exception ex)

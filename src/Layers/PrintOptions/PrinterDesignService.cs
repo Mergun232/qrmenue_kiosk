@@ -26,8 +26,44 @@ namespace PrintOptions
                 : Path.Combine(Application.StartupPath, "Receipts");
         }
 
+        /// <summary>ReceiptJSON doluysa dosya mevcut ve okunabilir olmalı; aksi halde fiş basılmamalı.</summary>
+        public static bool CanPrintReceipt(RecieptDto dto)
+        {
+            if (dto == null) return false;
+            if (string.IsNullOrWhiteSpace(dto.ReceiptJSON)) return true;
+            return TryLoadReceiptJsonLines(dto.ReceiptJSON, out _);
+        }
+
+        private static bool TryLoadReceiptJsonLines(string receiptJsonFileName, out List<RecieptInfo> lines)
+        {
+            lines = null;
+            if (string.IsNullOrWhiteSpace(receiptJsonFileName)) return false;
+
+            string jsonPath = Path.Combine(GetReceiptsFolder(), receiptJsonFileName.Trim());
+            if (!File.Exists(jsonPath)) return false;
+
+            try
+            {
+                string jsonContent = File.ReadAllText(jsonPath, System.Text.Encoding.UTF8);
+                var settings = new JsonSerializerSettings { Error = (s, e) => e.ErrorContext.Handled = true };
+                lines = JsonConvert.DeserializeObject<List<RecieptInfo>>(jsonContent, settings);
+                return lines != null && lines.Count > 0;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         public void PrintSlip(RecieptDto RecieptDto)
         {
+            if (!CanPrintReceipt(RecieptDto))
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[PrinterDesign] ReceiptJSON dosyası yok veya boş, fiş atlandı: {RecieptDto?.ReceiptJSON}");
+                return;
+            }
+
             fis = new FontInfoService(RecieptDto.PrinterData.DefaultFont);
             
             // JSON üzerinden değer gönderilirse onu kullanır, gönderilmezse varsayılan 280px olur
@@ -60,28 +96,7 @@ namespace PrintOptions
             List<RecieptInfo> pavoInfosFromFile = null;
             string receiptJsonPlaceholder = RecieptInfoTypeEnum.ReceiptJSON.ToString();
             if (!string.IsNullOrEmpty(RecieptDto.ReceiptJSON))
-            {
-                try
-                {
-                    string receiptsFolder = GetReceiptsFolder();
-                    string jsonPath = Path.Combine(receiptsFolder, RecieptDto.ReceiptJSON);
-
-                    if (File.Exists(jsonPath))
-                    {
-                        string jsonContent = File.ReadAllText(jsonPath, System.Text.Encoding.UTF8);
-                        var settings = new JsonSerializerSettings { Error = (s, e) => e.ErrorContext.Handled = true };
-                        pavoInfosFromFile = JsonConvert.DeserializeObject<List<RecieptInfo>>(jsonContent, settings);
-                    }
-                    else
-                    {
-                        System.Diagnostics.Debug.WriteLine($"[PrinterDesign] ReceiptJSON dosyası bulunamadı: {jsonPath}");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[PrinterDesign] ReceiptJSON yüklenirken hata: {ex.Message}");
-                }
-            }
+                TryLoadReceiptJsonLines(RecieptDto.ReceiptJSON, out pavoInfosFromFile);
 
             // ReceiptJSON yer tutucusu: PrinterData.RecieptInfos içinde Type "ReceiptJSON" olan satırın yerine dosyadaki satırlar konur.
             // Yer tutucu yoksa (eski davranış) dosya içeriği listenin sonuna eklenir.

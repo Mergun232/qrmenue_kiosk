@@ -1,4 +1,4 @@
-﻿"DeployProject"
+"DeployProject"
 {
 "VSVersion" = "3:800"
 "ProjectType" = "8:{978C614F-708E-4E1A-B201-565925725DBA}"
@@ -2674,7 +2674,7 @@
         {
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:Qiox"
-        "ProductCode" = "8:{F103CB32-DCA7-48E9-B131-9C0B7D4A48B8}"
+        "ProductCode" = "8:{8B44FCE6-D1DF-4115-AD5E-A98CCFB3ED11}"
         "PackageCode" = "8:{FC53E6B8-5CB5-4A64-8021-C782D92F2255}"
         "UpgradeCode" = "8:{9F270377-198A-4194-89E1-4BE080AA4ACD}"
         "AspNetVersion" = "8:2.0.50727.0"
@@ -2682,7 +2682,7 @@
         "RemovePreviousVersions" = "11:TRUE"
         "DetectNewerInstalledVersion" = "11:TRUE"
         "InstallAllUsers" = "11:FALSE"
-        "ProductVersion" = "8:1.0.0"
+        "ProductVersion" = "8:1.0.1"
         "Manufacturer" = "8:QIOX"
         "ARPHELPTELEPHONE" = "8:"
         "ARPHELPLINK" = "8:"

@@ -241,7 +241,7 @@ namespace Qrmenue
         }
 
         /// <summary>printer-requests API'yi çağırır; 401 ise login'e yönlendirir, success ise dönen URL'lerden fiş alıp yazdırır.</summary>
-        private async Task CheckPrintablesAsync()
+        public async Task CheckPrintablesAsync()
         {
             try
             {
@@ -316,6 +316,11 @@ namespace Qrmenue
                             {
                                 foreach (var fiche in receipts)
                                 {
+                                    if (!PrinterDesignService.CanPrintReceipt(fiche))
+                                    {
+                                        _LogSys("ReceiptJSON bulunamadı veya boş, fiş basılmadı: " + (fiche.ReceiptJSON ?? ""));
+                                        continue;
+                                    }
                                     printerDesignService.PrintSlip(fiche); // Yazıcı yoksa PrinterDesignService varsayılana düşer
                                     printed++;
                                 }
