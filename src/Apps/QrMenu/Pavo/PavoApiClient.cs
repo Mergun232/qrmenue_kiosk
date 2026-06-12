@@ -13,6 +13,16 @@ namespace QRMENUE.Pavo
     {
         private static int _globalTransactionSequence = Math.Max(100, Environment.TickCount % 10000);
         private static readonly object _seqLock = new object();
+        private static readonly HttpClient _httpClient;
+
+        static PavoApiClient()
+        {
+            var handler = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (_, __, ___, ____) => true
+            };
+            _httpClient = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(90) };
+        }
 
         private readonly string _baseUrl;
         private readonly string _serialNumber;
@@ -42,27 +52,20 @@ namespace QRMENUE.Pavo
             }
         }
 
-        private HttpClient CreateHttpClient()
-        {
-            var handler = new HttpClientHandler();
-            if (_bypassSsl)
-                handler.ServerCertificateCustomValidationCallback = (_, __, ___, ____) => true;
 
-            return new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(90) };
-        }
 
         /// <summary>Pairing - Cihaz eşleştirme (ilk bağlantıda).</summary>
         public async Task<string> PairingAsync()
         {
             var payload = new { TransactionHandle = CreateTransactionHandle() };
-            return await PostAsync("/Pairing", payload).ConfigureAwait(false);
+            return await PostAsync("/Pairing", payload);
         }
 
         /// <summary>PaymentMediators - Ödeme yöntemlerini listele.</summary>
         public async Task<string> GetPaymentMediatorsAsync()
         {
             var payload = new { TransactionHandle = CreateTransactionHandle() };
-            return await PostAsync("/PaymentMediators", payload).ConfigureAwait(false);
+            return await PostAsync("/PaymentMediators", payload);
         }
 
         /// <summary>InitiateSale - Kiosk satış başlat (müşteri kart okutur).</summary>
@@ -92,14 +95,14 @@ namespace QRMENUE.Pavo
                     ReceiptInformation = new { ReceiptImageEnabled = false, ReceiptWidth = "58mm", PrintCustomerReceipt = true, PrintMerchantReceipt = true }
                 }
             };
-            return await PostAsync("/InitiateSale", payload).ConfigureAwait(false);
+            return await PostAsync("/InitiateSale", payload);
         }
 
         /// <summary>GetSaleResult - InitiateSale sonucunu sorgula.</summary>
         public async Task<string> GetSaleResultAsync(string orderNo)
         {
             var payload = new { TransactionHandle = CreateTransactionHandle(), Sale = new { OrderNo = orderNo } };
-            return await PostAsync("/GetSaleResult", payload).ConfigureAwait(false);
+            return await PostAsync("/GetSaleResult", payload);
         }
 
         /// <summary>CompleteSale - Nakit satış (ödeme zaten alındı).</summary>
@@ -122,7 +125,7 @@ namespace QRMENUE.Pavo
                     PaymentInformations = payments ?? new List<PaymentInformation>()
                 }
             };
-            return await PostAsync("/CompleteSale", payload).ConfigureAwait(false);
+            return await PostAsync("/CompleteSale", payload);
         }
 
         /// <summary>PrintOut - Fiş yazdır (Base64 görsel).</summary>
@@ -133,7 +136,7 @@ namespace QRMENUE.Pavo
                 TransactionHandle = CreateTransactionHandle(),
                 Print = new { Image = base64Image ?? "" }
             };
-            return await PostAsync("/PrintOut", payload).ConfigureAwait(false);
+            return await PostAsync("/PrintOut", payload);
         }
 
         /// <summary>GetDeviceInfo - Cihaz bilgisi.</summary>
@@ -144,7 +147,7 @@ namespace QRMENUE.Pavo
                 TransactionHandle = CreateTransactionHandle(),
                 DeviceInfo = new { AdditionalInfo = new { serialNumber = true, fingerPrint = true } }
             };
-            return await PostAsync("/GetDeviceInfo", payload).ConfigureAwait(false);
+            return await PostAsync("/GetDeviceInfo", payload);
         }
 
         /// <summary>Socket'ten gelen tam JSON'u TransactionHandle ile birleştirip endpoint'e gönderir.</summary>
@@ -162,7 +165,7 @@ namespace QRMENUE.Pavo
             {
                 payload = new { TransactionHandle = handle };
             }
-            return await PostAsync(path, payload).ConfigureAwait(false);
+            return await PostAsync(path, payload);
         }
 
         private async Task<string> PostAsync(string path, object payload)
@@ -176,20 +179,40 @@ namespace QRMENUE.Pavo
             {
                 try
                 {
-                    var content = new StringContent(json, Encoding.UTF8, "application/json");
-                    using (var client = CreateHttpClient())
+                    try
                     {
-                        var response = await client.PostAsync(url, content).ConfigureAwait(false);
-                        return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                        var uri = new Uri(url);
+                        var servicePoint = System.Net.ServicePointManager.FindServicePoint(uri);
+                        if (servicePoint != null)
+                        {
+                            servicePoint.ConnectionLeaseTimeout = 5000; // 5 saniye
+                        }
                     }
+                    catch { }
+
+                    var content = new StringContent(json, Encoding.UTF8, "application/json");
+                    var response = await _httpClient.PostAsync(url, content);
+                    return await response.Content.ReadAsStringAsync();
                 }
                 catch (Exception ex)
                 {
+                    try
+                    {
+                        // Hata durumunda (bağlantı koptuğunda) havuzdaki bozuk soketleri temizle
+                        var uri = new Uri(url);
+                        var servicePoint = System.Net.ServicePointManager.FindServicePoint(uri);
+                        if (servicePoint != null)
+                        {
+                            servicePoint.CloseConnectionGroup("");
+                        }
+                    }
+                    catch { }
+
                     lastEx = ex;
                     if (attempt < maxRetries &&
                         (ex is HttpRequestException || ex is TaskCanceledException || ex.InnerException is HttpRequestException))
                     {
-                        await Task.Delay(3000).ConfigureAwait(false);
+                        await Task.Delay(3000);
                     }
                     else
                     {

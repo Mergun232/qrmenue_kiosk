@@ -1,6 +1,9 @@
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using QRMENUE;
+using QRMENUE.Pavo;
 using System;
 using System.Drawing;
 using System.IO;
@@ -8,12 +11,12 @@ using System.Windows.Forms;
 
 namespace WebBrowser
 {
-    public partial class Chromium : Form
+    public partial class WebForm : Form
     {
         private WebView2 webView;
         private string loginUrl = "";
 
-        public Chromium(string url)
+        public WebForm(string url)
         {
             loginUrl = url ?? "";
             InitializeComponent();
@@ -38,10 +41,10 @@ namespace WebBrowser
             catch { }
             webView.Dock = DockStyle.Fill;
             this.Controls.Add(webView);
-            this.Load += Chromium_Load;
+            this.Load += WebForm_Load;
         }
 
-        private async void Chromium_Load(object sender, EventArgs e)
+        private async void WebForm_Load(object sender, EventArgs e)
         {
             ApplyIconFromImages();
             try
@@ -86,11 +89,64 @@ namespace WebBrowser
             }
         }
 
+        public void SendPavoResultToJs(string jsonResult)
+        {
+            object parsedRes = jsonResult;
+            try
+            {
+                parsedRes = JsonConvert.DeserializeObject(jsonResult);
+            }
+            catch { }
+            SendResponseToJs("PavoResult", true, parsedRes, null);
+        }
+
+        private void SendResponseToJs(string action, bool success, object data, string errorMessage, JToken reqId = null)
+        {
+            object responseObj;
+            if (reqId != null)
+            {
+                responseObj = new
+                {
+                    action = action,
+                    id = reqId,
+                    success = success,
+                    data = data,
+                    error = errorMessage
+                };
+            }
+            else
+            {
+                responseObj = new
+                {
+                    action = action,
+                    success = success,
+                    data = data,
+                    error = errorMessage
+                };
+            }
+
+            string responseJson = JsonConvert.SerializeObject(responseObj);
+
+            if (webView.InvokeRequired)
+            {
+                webView.Invoke((Action)(() =>
+                {
+                    webView.CoreWebView2.PostWebMessageAsString(responseJson);
+                }));
+            }
+            else
+            {
+                webView.CoreWebView2.PostWebMessageAsString(responseJson);
+            }
+        }
+
         private void CoreWebView2_WebMessageReceived(object sender, Microsoft.Web.WebView2.Core.CoreWebView2WebMessageReceivedEventArgs e)
         {
             try
             {
                 string message = e.TryGetWebMessageAsString();
+                
+                // Eski düz metin kontrolü
                 if (message == "MinimizeApp")
                 {
                     Form host = this;
@@ -111,9 +167,33 @@ namespace WebBrowser
                         }));
                     }
                     catch { }
+                    return;
+                }
+
+                // JSON IPC yönlendirme
+                if (message.TrimStart().StartsWith("{"))
+                {
+                    JObject request = JObject.Parse(message);
+                    string action = request["action"]?.ToString();
+                    JToken data = request["data"];
+                    string payload = data != null ? data.ToString(Newtonsoft.Json.Formatting.None) : null;
+                    JToken reqId = request["id"];
+
+                    if (action == "PavoRequest")
+                    {
+                        PavoPosSocketBridge.TriggerPavoRequest(payload, (res, room) => 
+                        {
+                            object parsedRes = res;
+                            try { parsedRes = JToken.Parse(res); } catch { }
+                            SendResponseToJs(action + "_Response", true, parsedRes, null, reqId);
+                        });
+                    }
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("IPC WebMessageReceived Hata: " + ex.Message);
+            }
         }
 
         /// <summary>images/ klasöründeki simgeyi form penceresinde kullanır.</summary>
@@ -145,7 +225,7 @@ namespace WebBrowser
             webView.BringToFront();
         }
 
-        private void Chromium_Closing(object sender, FormClosingEventArgs e)
+        private void WebForm_Closing(object sender, FormClosingEventArgs e)
         {
             Application.Exit();
         }

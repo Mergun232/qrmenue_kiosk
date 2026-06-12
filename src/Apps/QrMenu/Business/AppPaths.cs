@@ -21,9 +21,18 @@ namespace QRMENUE
             }
         }
 
-        /// <summary>Kullanıcı yazabilir kök: %LocalAppData%\Qiox</summary>
-        public static string WritableDataDirectory =>
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), LocalAppFolderName);
+        /// <summary>Kullanıcı yazabilir kök: %LocalAppData%\Qiox (Debug modda exe startup dizini)</summary>
+        public static string WritableDataDirectory
+        {
+            get
+            {
+#if DEBUG
+                return InstallDirectory;
+#else
+                return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), LocalAppFolderName);
+#endif
+            }
+        }
 
         public static string ConfigJsonPath => Path.Combine(WritableDataDirectory, "config.json");
 
@@ -32,8 +41,6 @@ namespace QRMENUE
         public static string WebView2UserDataFolder => Path.Combine(WritableDataDirectory, "WebView2");
 
         public static string ErrorLogPath => Path.Combine(WritableDataDirectory, "errorLog.txt");
-
-        public static string PavoPosConfigPath => Path.Combine(WritableDataDirectory, "pavopos.json");
 
         public static string ReceiptsDirectory => Path.Combine(WritableDataDirectory, "Receipts");
 
@@ -51,7 +58,6 @@ namespace QRMENUE
 
                 TryMigrateFile(Path.Combine(inst, "config.json"), ConfigJsonPath);
                 TryMigrateFile(Path.Combine(inst, "kiosk_settings.json"), KioskSettingsPath);
-                TryMigrateFile(Path.Combine(inst, "pavopos.json"), PavoPosConfigPath);
                 TryMigrateFile(Path.Combine(inst, "errorLog.txt"), ErrorLogPath);
             }
             catch { }

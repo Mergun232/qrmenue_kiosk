@@ -376,7 +376,7 @@ namespace QRMENUE
 
                     if (logRes.Browser && !string.IsNullOrWhiteSpace(logRes.Url))
                     {
-                        var browser = new Chromium(logRes.Url);
+                        var browser = new WebForm(logRes.Url);
                         browser.Show();
                     }
                 }

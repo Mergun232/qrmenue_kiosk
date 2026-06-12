@@ -24,6 +24,7 @@ namespace Qrmenue
     /// </summary>
     public partial class MainForm : Form
     {
+        public static MainForm Instance { get; private set; }
         private bool allowshowdisplay = false, isCheckProgress = false, isSafeClose = false;
         string _companyId;
         private int _printRequestTime, _stateInformTime = 1000;
@@ -33,6 +34,7 @@ namespace Qrmenue
         PrintService printService = new PrintService();
         PrinterDesignService printerDesignService = new PrinterDesignService();
         private LoginResultDTO floginResultDTO;
+        public string LoginToken => floginResultDTO?.LoginToken;
         private SocketService _socketService;
         private SocketLogForm _socketLogForm;
 
@@ -54,6 +56,7 @@ namespace Qrmenue
 
         public MainForm(string companyID, LoginResultDTO loginResultDTO = null)
         {
+            Instance = this;
             InitializeComponent();
             floginResultDTO = loginResultDTO;
             helpers = new Helpers();
@@ -116,42 +119,11 @@ namespace Qrmenue
             {
                 PavoPosSocketBridge.TriggerPavoRequest(payload ?? "", (resultJson, room) =>
                 {
+                    PavoPosSocketBridge.DeliverPavoResultToWebView(resultJson);
                     if (_socketService != null)
                     {
                         _ = _socketService.EmitPavoResultAsync(resultJson, room);
                     }
-                });
-            }
-            else if (eventName == "PavoPairing")
-            {
-                PavoPosSocketBridge.TriggerPairing(payload ?? "");
-            }
-            else if (eventName == "PavoInitiateSale")
-            {
-                PavoPosSocketBridge.TriggerInitiateSale(payload ?? "");
-            }
-            else if (eventName == "PavoGetSaleResult")
-            {
-                PavoPosSocketBridge.TriggerGetSaleResult(payload ?? "", resultJson =>
-                {
-                    if (_socketService != null)
-                        _ = _socketService.EmitPavoResultAsync(resultJson);
-                });
-            }
-            else if (eventName == "PavoPrintOut")
-            {
-                PavoPosSocketBridge.TriggerPrintOut(payload ?? "");
-            }
-            else if (eventName == "PavoPaymentMediators")
-            {
-                PavoPosSocketBridge.TriggerPaymentMediators(payload ?? "");
-            }
-            else if (eventName == "PavoCompleteSale")
-            {
-                PavoPosSocketBridge.TriggerCompleteSale(payload ?? "", resultJson =>
-                {
-                    if (_socketService != null)
-                        _ = _socketService.EmitPavoResultAsync(resultJson);
                 });
             }
         }
@@ -294,9 +266,9 @@ namespace Qrmenue
                     if (InvokeRequired)
                     {
                         BeginInvoke(new Action(() => {
-                            var frm = Application.OpenForms.Cast<Form>().FirstOrDefault(x => x.Name == "Chromium");
+                            var frm = Application.OpenForms.Cast<Form>().FirstOrDefault(x => x.Name == "WebForm");
                             if (frm != null) {
-                                var temp = (Chromium)frm;
+                                var temp = (WebForm)frm;
                                 temp.Login();
                                 temp.ManuelFocus();
                             }
@@ -459,6 +431,7 @@ namespace Qrmenue
 
         private void MainForm_FormClosed(object sender, FormClosedEventArgs e)
         {
+            Instance = null;
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
@@ -466,6 +439,7 @@ namespace Qrmenue
             // Kullanıcı menüden 'Çıkış' demişse veya Windows kapanıyorsa veya Application.Exit çağrılmışsa
             if (isSafeClose || e.CloseReason == CloseReason.WindowsShutDown || e.CloseReason == CloseReason.ApplicationExitCall)
             {
+                Instance = null;
                 try
                 {
                     if (notifyIcon != null)

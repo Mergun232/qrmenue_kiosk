@@ -1,7 +1,7 @@
 
 namespace WebBrowser
 {
-    partial class Chromium
+    partial class WebForm
     {
         /// <summary>
         /// Required designer variable.
@@ -29,19 +29,19 @@ namespace WebBrowser
         /// </summary>
         private void InitializeComponent()
         {
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Chromium));
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(WebForm));
             this.SuspendLayout();
             // 
-            // Chromium
+            // WebForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 450);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.Sizable;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
-            this.Name = "Chromium";
+            this.Name = "WebForm";
             this.Text = "Qr Menue";
-            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Chromium_Closing);
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.WebForm_Closing);
             this.ResumeLayout(false);
 
         }

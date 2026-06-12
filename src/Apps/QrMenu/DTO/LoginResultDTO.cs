@@ -1,6 +1,6 @@
 namespace Qrmenue.DTO
 {
-    /// <summary>Giriş sonrası MainForm/Chromium için kullanılan model. LoginToken yeni exe API için zorunludur.</summary>
+    /// <summary>Giriş sonrası MainForm/WebForm için kullanılan model. LoginToken yeni exe API için zorunludur.</summary>
     public class LoginResultDTO
     {
         public string result { get; set; }

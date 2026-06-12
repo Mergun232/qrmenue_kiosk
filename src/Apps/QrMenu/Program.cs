@@ -32,6 +32,7 @@ namespace QrMenu
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             AppPaths.EnsureWritableDataAndMigrate();
+            PrintOptions.PrinterDesignService.ReceiptsDirectory = AppPaths.ReceiptsDirectory;
             try
             {
                 var ks = KioskSettingsStore.Load();

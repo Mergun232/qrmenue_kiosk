@@ -16,6 +16,16 @@ namespace PrintOptions
         FontInfoService fis { get; set; } //= new FontInfoService();
         public readonly List<string> allowedHosts = new List<string>() { "qrmenue.com" };
 
+        /// <summary>Boşsa StartupPath/Receipts. Uygulama başında AppPaths.ReceiptsDirectory ile set edilmeli.</summary>
+        public static string ReceiptsDirectory { get; set; }
+
+        private static string GetReceiptsFolder()
+        {
+            return !string.IsNullOrWhiteSpace(ReceiptsDirectory)
+                ? ReceiptsDirectory
+                : Path.Combine(Application.StartupPath, "Receipts");
+        }
+
         public void PrintSlip(RecieptDto RecieptDto)
         {
             fis = new FontInfoService(RecieptDto.PrinterData.DefaultFont);
@@ -53,13 +63,7 @@ namespace PrintOptions
             {
                 try
                 {
-                    string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-                    string receiptsFolder = Path.Combine(localAppData, "Qiox", "Receipts");
-                    
-                    // Geriye dönük uyumluluk için eğer LocalAppData'da yoksa eski yöntemi (StartupPath) de kontrol et
-                    if (!Directory.Exists(receiptsFolder))
-                        receiptsFolder = Path.Combine(Application.StartupPath, "Receipts");
-
+                    string receiptsFolder = GetReceiptsFolder();
                     string jsonPath = Path.Combine(receiptsFolder, RecieptDto.ReceiptJSON);
 
                     if (File.Exists(jsonPath))
@@ -275,10 +279,7 @@ namespace PrintOptions
                  {
                      try
                      {
-                         string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-                        string receiptsFolder = Path.Combine(localAppData, "Qiox", "Receipts");
-                        if (!Directory.Exists(receiptsFolder))
-                            receiptsFolder = Path.Combine(Application.StartupPath, "Receipts");
+                         string receiptsFolder = GetReceiptsFolder();
                          string imagePath = Path.Combine(receiptsFolder, RecieptDto.ReceiptImage);
                          
                          if (File.Exists(imagePath))

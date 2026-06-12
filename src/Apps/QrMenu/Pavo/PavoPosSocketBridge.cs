@@ -2,28 +2,64 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Text.RegularExpressions;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web.Script.Serialization;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using QRMENUE;
 
 namespace QRMENUE.Pavo
 {
-    /// <summary>
-    /// Socket üzerinden gelen Pavo isteklerini arka planda tetikler.
-    /// MainForm OnSocketEvent'te PavoPairing, PavoInitiateSale, PavoGetSaleResult, PavoPrintOut dinlenir.
-    /// Tüm işlemler Task.Run ile arka planda çalışır.
-    /// </summary>
     public static class PavoPosSocketBridge
     {
         private static Action<string, string> _logCallback;
-        private static PavoApiClient _client;
-        private static readonly object _lock = new object();
 
         private static int _pavoRequestSequence = Math.Max(100, Math.Abs(Environment.TickCount % 100000));
         private static readonly object _seqLock = new object();
+        private static readonly HttpClient _httpClient;
+
+        private static string _lastPavoBaseUrl;
+        private static string _lastSerialNumber;
+        private static string _lastFingerprint;
+        private static DateTime _lastActivityTime = DateTime.MinValue;
+
+        static PavoPosSocketBridge()
+        {
+            try
+            {
+                // TLS 1.2 ve TLS 1.1 protokol desteğini aktif hale getir
+                System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12 | System.Net.SecurityProtocolType.Tls11;
+            }
+            catch { }
+
+            try
+            {
+                // Varsayılan 2 olan bağlantı sınırını artır
+                System.Net.ServicePointManager.DefaultConnectionLimit = 500;
+            }
+            catch { }
+
+            try
+            {
+                // Dinamik IP değişiklikleri için DNS yenileme süresi
+                System.Net.ServicePointManager.DnsRefreshTimeout = 60000;
+            }
+            catch { }
+
+            var handler = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (_, __, ___, ____) => true
+            };
+            _httpClient = new HttpClient(handler)
+            {
+                Timeout = TimeSpan.FromSeconds(90)
+            };
+
+            // Heartbeat/Keep-alive görevini başlat
+            StartHeartbeatTask();
+        }
 
         private static int GetNextSequence()
         {
@@ -34,294 +70,77 @@ namespace QRMENUE.Pavo
             }
         }
 
-        /// <summary>Log callback ve client kaydeder. PavoPosForm açıldığında çağrılır.</summary>
-        public static void Register(Action<string, string> logCallback, PavoApiClient client)
+        /// <summary>Log callback kaydeder. PavoPosForm açıldığında çağrılır.</summary>
+        public static void Register(Action<string, string> logCallback, object obsoleteClient = null)
         {
-            lock (_lock)
-            {
-                _logCallback = logCallback;
-                _client = client;
-            }
+            _logCallback = logCallback;
         }
 
         /// <summary>Kaydı kaldırır. Form kapandığında.</summary>
         public static void Unregister()
         {
-            lock (_lock)
-            {
-                _logCallback = null;
-                _client = null;
-            }
+            _logCallback = null;
         }
+
+        private static readonly object _fileLock = new object();
 
         private static void Log(string tag, string msg)
         {
-            // SystemDiagnostics ile debug'a da yazdırılım
-            System.Diagnostics.Debug.WriteLine($"[{tag}] {msg}");
-            try { _logCallback?.Invoke(tag, msg ?? ""); } catch { }
-        }
-
-        private static PavoApiClient GetOrCreateClient()
-        {
-            lock (_lock)
+            try
             {
-                if (_client != null) return _client;
+                System.Diagnostics.Debug.WriteLine($"[{tag}] {msg}");
+                
+                // Logları yerel dosyaya yaz
+                WriteLogToFile(tag, msg);
+
+                _logCallback?.Invoke(tag, msg);
             }
-            var cfg = LoadConfig();
-            if (cfg == null) return null;
-            var c = new PavoApiClient(cfg.BaseUrl, cfg.SerialNumber, cfg.Fingerprint, cfg.BypassSsl);
-            lock (_lock) { _client = c; }
-            return c;
+            catch { }
         }
 
-        private static PavoConfig LoadConfig()
+        private static void WriteLogToFile(string tag, string msg)
         {
             try
             {
-                var path = AppPaths.PavoPosConfigPath;
-                if (!File.Exists(path)) return null;
-                var json = File.ReadAllText(path);
-                return new JavaScriptSerializer().Deserialize<PavoConfig>(json);
+                string logDir = AppPaths.WritableDataDirectory;
+                if (string.IsNullOrEmpty(logDir)) return;
+
+                string filePath = Path.Combine(logDir, "pavoLog.txt");
+                string backupPath = Path.Combine(logDir, "pavoLog_old.txt");
+
+                lock (_fileLock)
+                {
+                    if (File.Exists(filePath))
+                    {
+                        var info = new FileInfo(filePath);
+                        if (info.Length > 5 * 1024 * 1024) // 5 MB
+                        {
+                            try
+                            {
+                                if (File.Exists(backupPath))
+                                    File.Delete(backupPath);
+                                File.Move(filePath, backupPath);
+                            }
+                            catch { }
+                        }
+                    }
+
+                    using (var sw = new StreamWriter(filePath, true, Encoding.UTF8))
+                    {
+                        sw.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} [{tag}] {msg}");
+                    }
+                }
             }
-            catch { return null; }
+            catch { }
         }
 
-        /// <summary>Socket'ten "PavoPairing" geldiğinde. payload: tam JSON veya boş.</summary>
-        public static void TriggerPairing(string payload = null)
+        /// <summary>PavoRequest - socket veya WebView IPC'den gelir; POS'a POST edilir.</summary>
+        public static void TriggerPavoRequest(string payload, Action<string> onIpcResult)
         {
-            Task.Run(async () =>
-            {
-                try
-                {
-                    var client = GetOrCreateClient();
-                    if (client == null) { Log("Pavo", "pavopos.json yok veya geçersiz."); return; }
-                    Log("Pavo", "Pairing başlatılıyor (socket)...");
-                    var body = string.IsNullOrWhiteSpace(payload) ? "{}" : payload;
-                    if (IsFullJson(body))
-                    {
-                        var result = await client.PostRawAsync("/Pairing", body);
-                        Log("Pavo", "Pairing yanıt: " + Truncate(result, 500));
-                    }
-                    else
-                    {
-                        var result = await client.PairingAsync();
-                        Log("Pavo", "Pairing yanıt: " + Truncate(result, 500));
-                    }
-                }
-                catch (Exception ex) { Log("Pavo Hata", "Pairing: " + ex.Message); }
-            });
+            TriggerPavoRequest(payload, (res, room) => onIpcResult?.Invoke(res));
         }
 
-        /// <summary>Socket'ten "PavoInitiateSale" geldiğinde. payload: tam JSON veya { "orderNo", "totalPrice" }.</summary>
-        public static void TriggerInitiateSale(string payload)
-        {
-            Task.Run(async () =>
-            {
-                try
-                {
-                    var client = GetOrCreateClient();
-                    if (client == null) { Log("Pavo", "Client yok."); return; }
-                    if (IsFullJson(payload) && HasProperty(payload, "Sale"))
-                    {
-                        Log("Pavo", "InitiateSale başlatılıyor (socket, tam JSON)...");
-                        var result = await client.PostRawAsync("/InitiateSale", payload);
-                        Log("Pavo", "InitiateSale yanıt: " + Truncate(result, 500));
-                    }
-                    else
-                    {
-                        string orderNo = null;
-                        decimal totalPrice = 20m;
-                        if (!string.IsNullOrWhiteSpace(payload))
-                        {
-                            var jo = JObject.Parse(payload);
-                            orderNo = jo["orderNo"]?.ToString();
-                            if (jo["totalPrice"] != null) decimal.TryParse(jo["totalPrice"].ToString(), out totalPrice);
-                        }
-                        if (string.IsNullOrWhiteSpace(orderNo)) orderNo = "PAVO" + DateTime.Now.ToString("yyyyMMddHHmmss");
-                        Log("Pavo", "InitiateSale başlatılıyor (socket): OrderNo=" + orderNo);
-                        var items = new System.Collections.Generic.List<SaleItem>
-                        {
-                            new SaleItem { Name = "Test Ürün", IsGeneric = false, UnitCode = "KGM", TaxGroupCode = "KDV18", ItemQuantity = 1, UnitPriceAmount = totalPrice, GrossPriceAmount = totalPrice, TotalPriceAmount = totalPrice }
-                        };
-                        var result = await client.InitiateSaleAsync(orderNo, totalPrice, items);
-                        Log("Pavo", "InitiateSale yanıt: " + Truncate(result, 500));
-                    }
-                }
-                catch (Exception ex) { Log("Pavo Hata", "InitiateSale: " + ex.Message); }
-            });
-        }
-
-        /// <summary>Socket'ten "PavoGetSaleResult" geldiğinde. payload: tam JSON veya { "orderNo" }. Sonuç PavoRequest ile aynı formatta onResult üzerinden iletilir.</summary>
-        public static void TriggerGetSaleResult(string payload, Action<string> onResult = null)
-        {
-            Task.Run(async () =>
-            {
-                try
-                {
-                    var client = GetOrCreateClient();
-                    if (client == null)
-                    {
-                        Log("Pavo", "Client yok.");
-                        onResult?.Invoke("{\"HasError\":true,\"ErrorCode\":999,\"DeviceOffline\":true,\"Message\":\"Client yok.\"}");
-                        return;
-                    }
-                    string orderNo = null;
-                    string result = null;
-                    if (IsFullJson(payload) && HasProperty(payload, "Sale"))
-                    {
-                        try { orderNo = JObject.Parse(payload)["Sale"]?["OrderNo"]?.ToString(); } catch { }
-                        Log("Pavo", "GetSaleResult sorgulanıyor (socket, tam JSON)...");
-                        result = await client.PostRawAsync("/GetSaleResult", payload);
-                        Log("Pavo", "GetSaleResult yanıt: " + Truncate(result, 500));
-                    }
-                    else
-                    {
-                        if (!string.IsNullOrWhiteSpace(payload))
-                        {
-                            var jo = JObject.Parse(payload);
-                            orderNo = jo["orderNo"]?.ToString() ?? jo["OrderNo"]?.ToString();
-                        }
-                        if (string.IsNullOrWhiteSpace(orderNo))
-                        {
-                            Log("Pavo", "orderNo gerekli.");
-                            onResult?.Invoke("{\"HasError\":true,\"ErrorCode\":998,\"Message\":\"orderNo gerekli.\"}");
-                            return;
-                        }
-                        Log("Pavo", "GetSaleResult sorgulanıyor: " + orderNo);
-                        result = await client.GetSaleResultAsync(orderNo);
-                        Log("Pavo", "GetSaleResult yanıt: " + Truncate(result, 500));
-                    }
-                    if (result != null)
-                    {
-                        TryExtractAndSaveReceiptImage(result, orderNo);
-                        onResult?.Invoke(MinimizePavoResult(result, orderNo));
-                    }
-                }
-                catch (Exception ex)
-                {
-                    string realError = ex.Message;
-                    if (ex.InnerException != null) realError += " | Inner: " + ex.InnerException.Message;
-                    Log("Pavo Hata", "GetSaleResult: " + realError);
-                    onResult?.Invoke("{\"HasError\":true,\"ErrorCode\":999,\"DeviceOffline\":true,\"Message\":\"" + realError.Replace("\"", "\\\"") + "\"}");
-                }
-            });
-        }
-
-        /// <summary>Socket'ten "PavoPrintOut" geldiğinde. payload: tam JSON veya { "image" }.</summary>
-        public static void TriggerPrintOut(string payload)
-        {
-            Task.Run(async () =>
-            {
-                try
-                {
-                    var client = GetOrCreateClient();
-                    if (client == null) { Log("Pavo", "Client yok."); return; }
-                    if (IsFullJson(payload) && HasProperty(payload, "Print"))
-                    {
-                        Log("Pavo", "PrintOut başlatılıyor (socket, tam JSON)...");
-                        var result = await client.PostRawAsync("/PrintOut", payload);
-                        Log("Pavo", "PrintOut yanıt: " + Truncate(result, 300));
-                    }
-                    else
-                    {
-                        string image = null;
-                        if (!string.IsNullOrWhiteSpace(payload))
-                        {
-                            var jo = JObject.Parse(payload);
-                            image = jo["image"]?.ToString() ?? jo["Image"]?.ToString();
-                        }
-                        Log("Pavo", "PrintOut başlatılıyor (socket)...");
-                        var result = await client.PrintOutAsync(image ?? "");
-                        Log("Pavo", "PrintOut yanıt: " + Truncate(result, 300));
-                    }
-                }
-                catch (Exception ex) { Log("Pavo Hata", "PrintOut: " + ex.Message); }
-            });
-        }
-
-        /// <summary>Socket'ten "PavoPaymentMediators" veya "PavoCompleteSale" - tam JSON destekli.</summary>
-        public static void TriggerPaymentMediators(string payload = null)
-        {
-            Task.Run(async () =>
-            {
-                try
-                {
-                    var client = GetOrCreateClient();
-                    if (client == null) { Log("Pavo", "Client yok."); return; }
-                    var body = string.IsNullOrWhiteSpace(payload) ? "{}" : payload;
-                    Log("Pavo", "PaymentMediators sorgulanıyor (socket)...");
-                    var result = await client.PostRawAsync("/PaymentMediators", body).ConfigureAwait(false);
-                    Log("Pavo", "PaymentMediators yanıt: " + Truncate(result, 500));
-                }
-                catch (Exception ex) { Log("Pavo Hata", "PaymentMediators: " + ex.Message); }
-            });
-        }
-
-        /// <summary>Socket'ten "PavoCompleteSale". Sonuç GetSaleResult / PavoRequest ile aynı şekilde minimize edilip onResult ile iletilir.</summary>
-        public static void TriggerCompleteSale(string payload, Action<string> onResult = null)
-        {
-            Task.Run(async () =>
-            {
-                try
-                {
-                    var client = GetOrCreateClient();
-                    if (client == null)
-                    {
-                        Log("Pavo", "Client yok.");
-                        onResult?.Invoke("{\"HasError\":true,\"ErrorCode\":999,\"DeviceOffline\":true,\"Message\":\"Client yok.\"}");
-                        return;
-                    }
-                    if (string.IsNullOrWhiteSpace(payload) || !HasProperty(payload, "Sale"))
-                    {
-                        Log("Pavo", "CompleteSale için Sale objesi gerekli.");
-                        onResult?.Invoke("{\"HasError\":true,\"ErrorCode\":998,\"Message\":\"CompleteSale için Sale objesi gerekli.\"}");
-                        return;
-                    }
-                    string orderNo = null;
-                    try { orderNo = JObject.Parse(payload)["Sale"]?["OrderNo"]?.ToString(); } catch { }
-
-                    Log("Pavo", "CompleteSale başlatılıyor (socket)...");
-                    var result = await client.PostRawAsync("/CompleteSale", payload).ConfigureAwait(false);
-                    Log("Pavo", "CompleteSale yanıt: " + Truncate(result, 500));
-                    Log("Pavo", "CompleteSale Full Result: " + result);
-                    TryExtractAndSaveReceiptImage(result, orderNo);
-                    onResult?.Invoke(MinimizePavoResult(result, orderNo));
-                }
-                catch (Exception ex)
-                {
-                    string realError = ex.Message;
-                    if (ex.InnerException != null) realError += " | Inner: " + ex.InnerException.Message;
-                    Log("Pavo Hata", "CompleteSale: " + realError);
-                    onResult?.Invoke("{\"HasError\":true,\"ErrorCode\":999,\"DeviceOffline\":true,\"Message\":\"" + realError.Replace("\"", "\\\"") + "\"}");
-                }
-            });
-        }
-
-        private static bool IsFullJson(string s)
-        {
-            if (string.IsNullOrWhiteSpace(s)) return false;
-            s = s.Trim();
-            return s.StartsWith("{") && s.EndsWith("}");
-        }
-
-        private static bool HasProperty(string json, string prop)
-        {
-            try
-            {
-                var jo = JObject.Parse(json ?? "{}");
-                return jo[prop] != null;
-            }
-            catch { return false; }
-        }
-
-        private static string Truncate(string s, int max)
-        {
-            if (string.IsNullOrEmpty(s)) return "";
-            return s.Length > max ? s.Substring(0, max) + "..." : s;
-        }
-
-        /// <summary>Socket'ten "PavoRequest" - url + body ile doğrudan POST. Sunucu tüm bilgileri gönderir (POS IP, SerialNumber, vb.).</summary>
-        /// <param name="onResult">JSON + hedef oda (CancelSale / GetCancellationResult → Firma, diğerleri → Personel).</param>
+        /// <summary>PavoRequest - socket veya WebView IPC'den gelir; POS'a POST edilir.</summary>
         public static void TriggerPavoRequest(string payload, Action<string, PavoRequestResultRoom> onResult = null)
         {
             Task.Run(async () =>
@@ -332,11 +151,87 @@ namespace QRMENUE.Pavo
                     var jo = JObject.Parse(payload);
                     var url = jo["url"]?.ToString();
                     var bodyObj = jo["body"] as JObject;
+
+                    // Log yükleme isteği kontrolü
+                    bool isGetPavoLogs = false;
+                    if (jo["GetPavoLogs"] != null)
+                    {
+                        isGetPavoLogs = true;
+                    }
+                    else if ((url ?? "").IndexOf("GetPavoLogs", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        isGetPavoLogs = true;
+                    }
+                    else if (bodyObj != null && bodyObj["GetPavoLogs"] != null)
+                    {
+                        isGetPavoLogs = true;
+                    }
+
+                    if (isGetPavoLogs)
+                    {
+                        string uploadUrl = jo["uploadUrl"]?.ToString();
+                        if (string.IsNullOrEmpty(uploadUrl) && bodyObj != null)
+                        {
+                            uploadUrl = bodyObj["uploadUrl"]?.ToString();
+                        }
+                        if (string.IsNullOrEmpty(uploadUrl))
+                        {
+                            uploadUrl = AppDataLoader.GetApiUrl("api/exe/pavo-logs");
+                        }
+
+                        Log("Pavo", "Log dosyası sunucuya POST ediliyor: " + uploadUrl);
+
+                        string token = null;
+                        try
+                        {
+                            var openForms = System.Windows.Forms.Application.OpenForms.Cast<System.Windows.Forms.Form>().ToList();
+                            Log("Pavo Debug", "Açık Formlar: " + string.Join(", ", openForms.Select(f => $"{f.GetType().FullName} (Name: {f.Name})")));
+                            
+                            var mainForm = Qrmenue.MainForm.Instance;
+                            if (mainForm != null)
+                            {
+                                token = mainForm.LoginToken;
+                                Log("Pavo Debug", $"MainForm.Instance bulundu. Token durumu: {(string.IsNullOrEmpty(token) ? "BOŞ" : "DOLU (Uzunluk: " + token.Length + ")")}");
+                            }
+                            else
+                            {
+                                Log("Pavo Debug", "MainForm.Instance BULUNAMADI!");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Log("Pavo Debug", "MainForm.Instance erişim hatası: " + ex.Message);
+                        }
+
+                        bool success = await UploadLogsAsync(uploadUrl, token).ConfigureAwait(false);
+                        string statusMsg = success ? "Başarılı" : "Başarısız";
+                        Log("Pavo", "Log yükleme sonucu: " + statusMsg);
+
+                        string responseJson = "{\"HasError\":" + (success ? "false" : "true") + ",\"Message\":\"Log yükleme " + (success ? "başarılı" : "başarısız") + "\"}";
+                        onResult?.Invoke(responseJson, PavoRequestResultRoom.Personel);
+                        return;
+                    }
+
                     if (string.IsNullOrWhiteSpace(url)) { Log("Pavo", "PavoRequest: url gerekli."); return; }
+
+                    Log("Pavo", "İstek: " + payload);
+
+                    // IP adresi ve temel URL bilgisini güncelle
+                    try
+                    {
+                        var uri = new Uri(url);
+                        _lastPavoBaseUrl = uri.GetLeftPart(UriPartial.Authority);
+                    }
+                    catch { }
+
+                    _lastActivityTime = DateTime.Now;
 
                     if (bodyObj != null && bodyObj["TransactionHandle"] != null)
                     {
                         var th = bodyObj["TransactionHandle"];
+                        _lastSerialNumber = th["SerialNumber"]?.ToString() ?? _lastSerialNumber;
+                        _lastFingerprint = th["Fingerprint"]?.ToString() ?? _lastFingerprint;
+
                         if (th["TransactionSequence"] == null || th["TransactionSequence"].Type == JTokenType.Null)
                         {
                             // Eğer Sequence null gelmişse, garantili olarak her zaman büyüyen tekil bir sayı üret
@@ -355,37 +250,10 @@ namespace QRMENUE.Pavo
                         orderNo = bodyObj["Sale"]["OrderNo"]?.ToString();
                     }
 
-                    // --- EKLENEN ASENKRON TAKİP (POLLING) MANTIĞI ---
-                    if (url.IndexOf("/InitiateSale", StringComparison.OrdinalIgnoreCase) >= 0 || 
-                        url.IndexOf("/CompleteSale", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-
-                        if (!string.IsNullOrEmpty(orderNo))
-                        {
-                            string getUrl = url.Replace("InitiateSale", "GetSaleResult")
-                                               .Replace("CompleteSale", "GetSaleResult");
-                                                       
-                            Log("Pavo", $"[{orderNo}] HTTP Response beklenmeden paralel GetSaleResult takibi başlatılıyor...");
-                            
-                            _ = Task.Run(async () =>
-                            {
-                                await Task.Delay(1500).ConfigureAwait(false); // Cihaza isteği işlemesi için 1.5 saniyelik avans ver
-                                await PollGetSaleResultAsync(getUrl, (JObject)bodyObj, orderNo, onResult, PavoRequestResultRoom.Personel).ConfigureAwait(false);
-                            });
-                            
-                        }
-                    }
-
                     while (needsRetry && retryCount < maxRetries)
                     {
                         var bodyJson = bodyObj != null ? bodyObj.ToString() : "{}";
-                        if (retryCount == 0)
-                            Log("Pavo", "PavoRequest gönderiliyor: " + url);
-                        else
-                            Log("Pavo", $"PavoRequest tekrar deneniyor ({retryCount}/{maxRetries}): " + url);
-
                         result = await PostToUrlAsync(url, bodyJson).ConfigureAwait(false);
-                        Log("Pavo", $"Direct Result from {url}: {result}");
                         
                         // Check if result has ErrorCode 73
                         needsRetry = false;
@@ -412,77 +280,50 @@ namespace QRMENUE.Pavo
                         }
                     }
 
-                    if (url.IndexOf("/CancelSale", StringComparison.OrdinalIgnoreCase) >= 0 && bodyObj != null)
+                    if (url.IndexOf("CompleteSale", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        url.IndexOf("AddPaymentAndFinalizeSale", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        url.IndexOf("GetSaleResult", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        url.IndexOf("GetCancellationResult", StringComparison.OrdinalIgnoreCase) >= 0)
                     {
-                        try
-                        {
-                            var cancelRes = JObject.Parse(result);
-                            if (cancelRes["HasError"]?.Value<bool>() != true)
-                            {
-                                string pollOrderNo = orderNo;
-                                if (string.IsNullOrWhiteSpace(pollOrderNo))
-                                    pollOrderNo = cancelRes["Data"]?["OrderNo"]?.ToString();
-                                if (!string.IsNullOrWhiteSpace(pollOrderNo))
-                                {
-                                    string getCancelUrl = Regex.Replace(url, "CancelSale", "GetCancellationResult", RegexOptions.IgnoreCase);
-                                    Log("Pavo", $"[{pollOrderNo}] CancelSale sonrası GetCancellationResult takibi başlatılıyor...");
-                                    _ = Task.Run(async () =>
-                                    {
-                                        await Task.Delay(1500).ConfigureAwait(false);
-                                        await PollGetSaleResultAsync(getCancelUrl, (JObject)bodyObj, pollOrderNo, onResult, PavoRequestResultRoom.Firma).ConfigureAwait(false);
-                                    });
-                                }
-                            }
-                        }
-                        catch { }
-                    }
-
-                    if (url.IndexOf("CompleteSale", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        Log("Pavo", "CompleteSale Full Result: " + result);
                         TryExtractAndSaveReceiptImage(result, orderNo);
                     }
-                    else
-                    {
-                        Log("Pavo", "PavoRequest yanıt: " + Truncate(result, 500));
-                        if (url.IndexOf("GetSaleResult", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                            url.IndexOf("GetCancellationResult", StringComparison.OrdinalIgnoreCase) >= 0)
-                        {
-                            TryExtractAndSaveReceiptImage(result, orderNo);
-                        }
-                    }
                     
-                    // TransactionHandle socket aktarımında gereksiz yük olmasın diye kaldırılır
-                    string finalResultForSocket = result;
+                    // TransactionHandle IPC yanıtında gereksiz yük olmasın diye kaldırılır
+                    string finalResultForIpc = result;
                     try
                     {
                         var resJo = JObject.Parse(result);
                         if (resJo["TransactionHandle"] != null)
                         {
                             resJo.Property("TransactionHandle")?.Remove();
-                            finalResultForSocket = resJo.ToString(Newtonsoft.Json.Formatting.None);
+                            finalResultForIpc = resJo.ToString(Newtonsoft.Json.Formatting.None);
                         }
                     }
                     catch { }
 
-                    // orderNo already extracted above
-
+                    string ipcPayload;
                     if (url.IndexOf("/GetSaleResult", StringComparison.OrdinalIgnoreCase) >= 0 ||
                         url.IndexOf("/GetCancellationResult", StringComparison.OrdinalIgnoreCase) >= 0 ||
                         url.IndexOf("/CompleteSale", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                        url.IndexOf("/InitiateSale", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        url.IndexOf("/AddPaymentAndFinalizeSale", StringComparison.OrdinalIgnoreCase) >= 0 ||
                         url.IndexOf("/CancelSale", StringComparison.OrdinalIgnoreCase) >= 0)
                     {
-                        var socketRoom = (url.IndexOf("/CancelSale", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                         url.IndexOf("/GetCancellationResult", StringComparison.OrdinalIgnoreCase) >= 0)
-                            ? PavoRequestResultRoom.Firma
-                            : PavoRequestResultRoom.Personel;
-                        onResult?.Invoke(MinimizePavoResult(result, orderNo), socketRoom);
+                        ipcPayload = MinimizePavoResult(result, orderNo);
                     }
                     else
                     {
-                        onResult?.Invoke(finalResultForSocket, PavoRequestResultRoom.Personel); // NodeJS Socket'e gönderim
+                        ipcPayload = finalResultForIpc;
                     }
+
+                    Log("Pavo", "Yanıt: " + ipcPayload);
+                    
+                    // Kiosk/Socket desteği için oda tespiti
+                    var socketRoom = (url.IndexOf("/CancelSale", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                     url.IndexOf("/GetCancellationResult", StringComparison.OrdinalIgnoreCase) >= 0)
+                        ? PavoRequestResultRoom.Firma
+                        : PavoRequestResultRoom.Personel;
+
+                    onResult?.Invoke(ipcPayload, socketRoom);
                 }
                 catch (Exception ex)
                 {
@@ -491,111 +332,63 @@ namespace QRMENUE.Pavo
                     
                     Log("Pavo Hata", "PavoRequest: " + realError);
                     // Hata durumunda ErrorCode 999 döndürüyoruz ki cihaz kapalı / ulaşılamıyor durumu anlaşılsın
-                    onResult?.Invoke("{\"HasError\":true,\"ErrorCode\":999,\"DeviceOffline\":true,\"Message\":\"" + realError.Replace("\"", "\\\"") + "\"}", PavoRequestResultRoom.Personel);
+                    string errResult = "{\"HasError\":true,\"ErrorCode\":999,\"DeviceOffline\":true,\"Message\":\"" + realError.Replace("\"", "\\\"") + "\"}";
+                    Log("Pavo", "Yanıt: " + errResult);
+                    onResult?.Invoke(errResult, PavoRequestResultRoom.Personel);
                 }
             });
         }
 
-        private static async Task PollGetSaleResultAsync(string url, JObject originalBody, string orderNo, Action<string, PavoRequestResultRoom> onResult, PavoRequestResultRoom socketRoom)
+        /// <summary>Socket kaynaklı Pavo sonucunu WebView IPC (PavoResult) ile JS'e iletir. Socket emit yapılmaz.</summary>
+        public static void DeliverPavoResultToWebView(string resultJson)
         {
             try
             {
-                bool cancelPoll = url.IndexOf("GetCancellationResult", StringComparison.OrdinalIgnoreCase) >= 0;
-                Log("Pavo", $"[{orderNo}] Otomatik {(cancelPoll ? "GetCancellationResult" : "GetSaleResult")} takibi başladı...");
-                int maxRetries = 60; // 3 dakika boyunca her 3 saniyede 1 kez
-
-                for (int i = 0; i < maxRetries; i++)
-                {
-                    await Task.Delay(3000).ConfigureAwait(false);
-
-                    // Yeni body oluştur (Sadece TransactionHandle ve Sale:OrderNo içermeli)
-                    var newBody = new JObject();
-                    
-                    if (originalBody["TransactionHandle"] != null)
-                    {
-                        newBody["TransactionHandle"] = originalBody["TransactionHandle"].DeepClone();
-                    }
-                    else
-                    {
-                        newBody["TransactionHandle"] = new JObject();
-                    }
-                    
-                    newBody["TransactionHandle"]["TransactionSequence"] = GetNextSequence();
-                    newBody["TransactionHandle"]["TransactionDate"] = DateTime.Now.ToString("s") + ".000000";
-                    
-                    newBody["Sale"] = new JObject { ["OrderNo"] = orderNo };
-
-                    var pollResult = await PostToUrlAsync(url, newBody.ToString()).ConfigureAwait(false);
-                    
-                    TryExtractAndSaveReceiptImage(pollResult, orderNo);
-
-                    var resJo = JObject.Parse(pollResult);
-                    
-                    try
-                    {
-                        var socketPollResult = (JObject)resJo.DeepClone();
-                        socketPollResult.Property("TransactionHandle")?.Remove();
-                        onResult?.Invoke(MinimizePavoResult(socketPollResult.ToString(), orderNo), socketRoom);
-                    }
-                    catch 
-                    {
-                        onResult?.Invoke(MinimizePavoResult(pollResult, orderNo), socketRoom); // Fallback
-                    }
-
-                    if (resJo["HasError"]?.Value<bool>() == true)
-                    {
-                        string errCode = resJo["ErrorCode"]?.ToString() ?? "?";
-                        string errMsg = resJo["Message"]?.ToString() ?? "Bilinmeyen Hata";
-                        
-                        if (errCode == "130")
-                        {
-                            Log("Pavo", $"[{orderNo}] İşlem devam ediyor (130).");
-                            continue; // Döngüyü kırma, takibe devam et
-                        }
-                        else if (errCode == "73")
-                        {
-                            Log("Pavo", $"[{orderNo}] 73 alındı, tekrar deneniyor.");
-                            continue; // Tekrar dene (yeni sıra no ile)
-                        }
-                        
-                        Log("Pavo Hata", $"[{orderNo}] Takip hatası ({errCode}: {errMsg}), takip durduruldu.");
-                        break;
-                    }
-
-                    int statusId = resJo["Data"]?["StatusId"]?.Value<int>() ?? 0;
-                    
-                    // Devam edilecek (Beklemede olan) durumlar
-                    // 1:Suspended, 2:PaymentWaiting, 3:DocumentCreating, 4:DocumentPending,
-                    // 5:DocumentCreated ve 6+ terminal — takip burada biter (5 artık beklemede sayılmaz)
-                    // 9:Signing, 12:PaymentCancelling, 15:DocumentCancelling, 17:DocumentCancelPending, 19:ERPProcessing, 22:InspectionPending
-                    bool inProgress = (statusId == 1 || statusId == 2 || statusId == 3 || statusId == 4 ||
-                                       statusId == 9 || statusId == 12 ||
-                                       statusId == 15 || statusId == 17 || statusId == 19 || statusId == 22);
-
-                    if (!inProgress)
-                    {
-                        Log("Pavo", $"[{orderNo}] İşlem sonlandı (StatusId: {statusId}). Takip bitirildi.");
-                        break;
-                    }
-                }
+                var webForm = System.Windows.Forms.Application.OpenForms.Cast<System.Windows.Forms.Form>()
+                    .FirstOrDefault(x => x.Name == "WebForm") as WebBrowser.WebForm;
+                if (webForm != null)
+                    webForm.SendPavoResultToJs(resultJson);
             }
             catch (Exception ex)
             {
-                Log("Pavo Hata", $"[{orderNo}] Otomatik takipte hata: " + ex.Message);
+                Log("Pavo Hata", "IPC WebView iletim hatası: " + ex.Message);
             }
         }
 
         private static async Task<string> PostToUrlAsync(string url, string bodyJson)
         {
-            var handler = new HttpClientHandler
+            try
             {
-                ServerCertificateCustomValidationCallback = (_, __, ___, ____) => true
-            };
-            using (var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(90) }) // Fiş yazdırma vb. işlemler uzun sürebilir, eski 90 saniye değerine geri aldık
+                var uri = new Uri(url);
+                var servicePoint = System.Net.ServicePointManager.FindServicePoint(uri);
+                if (servicePoint != null)
+                {
+                    // Bağlantıların sık tazelemeyle ağ değişimlerine hızlı adapte olması için süreyi 5 saniye yapıyoruz
+                    servicePoint.ConnectionLeaseTimeout = 5000; 
+                }
+            }
+            catch { }
+
+            try
             {
                 var content = new StringContent(bodyJson, Encoding.UTF8, "application/json");
-                var response = await client.PostAsync(url, content).ConfigureAwait(false);
+                var response = await _httpClient.PostAsync(url, content).ConfigureAwait(false);
                 return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                try
+                {
+                    // Hata durumunda (bağlantı koptuğunda) havuzdaki bozuk soketleri temizle
+                    var uri = new Uri(url);
+                    var servicePoint = System.Net.ServicePointManager.FindServicePoint(uri);
+                    if (servicePoint != null)
+                    {
+                        servicePoint.CloseConnectionGroup("");
+                    }
+                }
+                catch { }
+                throw;
             }
         }
 
@@ -626,7 +419,6 @@ namespace QRMENUE.Pavo
             }
             catch
             {
-                // Remove TransactionHandle even on failure if parseable
                 try
                 {
                     var resJo = JObject.Parse(jsonResult);
@@ -638,7 +430,7 @@ namespace QRMENUE.Pavo
                 }
                 catch { }
 
-                return jsonResult; // JSON parse hatası durumunda orjinalini dön
+                return jsonResult;
             }
         }
 
@@ -647,7 +439,6 @@ namespace QRMENUE.Pavo
             try
             {
                 var jo = JObject.Parse(jsonResult);
-                // 130: işlem devam ediyor — Data genelde null; alt alanlara erişmeyelim (JValue hatası önlenir)
                 if (jo["HasError"]?.Value<bool>() == true)
                 {
                     var ec = jo["ErrorCode"];
@@ -707,23 +498,18 @@ namespace QRMENUE.Pavo
                     EnsureFolder();
                     try
                     {
-                        // JSON parçalaması: Çift encode olma ihtimalini kapsıyoruz
                         string prettyJson = string.Empty;
                         try
                         {
                             JToken parsedToken = JToken.Parse(receiptJsonStr);
-                            
-                            // Eğer içeriğin kendisi hala bir string'se (çift encode) tekrar ayrıştıralım
                             if (parsedToken.Type == JTokenType.String)
                             {
                                 parsedToken = JToken.Parse(parsedToken.ToString());
                             }
-                            
                             prettyJson = parsedToken.ToString(Newtonsoft.Json.Formatting.Indented);
                         }
                         catch
                         {
-                            // Eğer geçerli bir JSON objesine dönüştürülemezse, ham haliyle kaydedelim
                             prettyJson = receiptJsonStr;
                         }
 
@@ -742,7 +528,6 @@ namespace QRMENUE.Pavo
                         string originalJsonFilePath = Path.Combine(folderPath, $"ReceiptJSON_{orderNoFromData}_Original.json");
                         File.WriteAllText(originalJsonFilePath, prettyJson, Encoding.UTF8);
 
-                        // Dönüştürülmüş RecieptInfo listesini oluştur ve kaydet
                         var recieptInfos = ConvertPavoToRecieptInfos(prettyJson);
                         string convertedJson = Newtonsoft.Json.JsonConvert.SerializeObject(recieptInfos, Newtonsoft.Json.Formatting.Indented, new Newtonsoft.Json.JsonSerializerSettings { NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore });
                         string jsonFilePath = Path.Combine(folderPath, $"ReceiptJSON_{orderNoFromData}.json");
@@ -759,14 +544,6 @@ namespace QRMENUE.Pavo
             {
                 Log("Pavo Hata", "Fiş veri/resim kaydetme genel hatası: " + ex.Message);
             }
-        }
-
-        private class PavoConfig
-        {
-            public string BaseUrl { get; set; }
-            public string SerialNumber { get; set; }
-            public string Fingerprint { get; set; }
-            public bool BypassSsl { get; set; } = true;
         }
 
         private static System.Collections.Generic.List<PrintOptions.Dto.RecieptInfo> ConvertPavoToRecieptInfos(string jsonContent)
@@ -826,7 +603,6 @@ namespace QRMENUE.Pavo
                         string fontSize = pavoItem.fontSize == "large" ? "8" : "7";
                         string fontStyle = pavoItem.isBold == true ? "bold" : null;
 
-                        // Eğer sadece tek bir metin varsa, QrMenue taslağındaki gibi 'Line' olarak ekle
                         if (colCount == 1)
                         {
                             string t = "";
@@ -847,7 +623,6 @@ namespace QRMENUE.Pavo
                             continue;
                         }
 
-                        // Birden fazla metin parçası (sütun) varsa 'Row' kullan
                         var row = new PrintOptions.Dto.RecieptInfo { 
                             Type = "Row", 
                             FontInfo = new PrintOptions.Dto.FontInfo(), 
@@ -888,6 +663,157 @@ namespace QRMENUE.Pavo
                 Log("Pavo Hata", "ConvertPavoToRecieptInfos Hatası: " + ex.Message);
             }
             return list;
+        }
+
+        public static string GetRecentLogs(int maxLines = 500)
+        {
+            try
+            {
+                string logPath = Path.Combine(AppPaths.WritableDataDirectory, "pavoLog.txt");
+                if (!File.Exists(logPath)) return "Log dosyası bulunamadı.";
+
+                lock (_fileLock)
+                {
+                    var lines = File.ReadAllLines(logPath, Encoding.UTF8);
+                    if (lines.Length <= maxLines)
+                    {
+                        return string.Join(Environment.NewLine, lines);
+                    }
+                    else
+                    {
+                        var recentLines = lines.Skip(lines.Length - maxLines).ToArray();
+                        return string.Join(Environment.NewLine, recentLines);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return "Log okuma hatası: " + ex.Message;
+            }
+        }
+
+        public static async Task<bool> UploadLogsAsync(string uploadUrl, string loginToken = null)
+        {
+            try
+            {
+                string logPath = Path.Combine(AppPaths.WritableDataDirectory, "pavoLog.txt");
+                if (!File.Exists(logPath)) return false;
+
+                string logContent;
+                lock (_fileLock)
+                {
+                    logContent = File.ReadAllText(logPath, Encoding.UTF8);
+                }
+
+                string metadata = $"--- METADATA ---\n" +
+                                  $"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
+                                  $"MachineName: {Environment.MachineName}\n" +
+                                  $"OSVersion: {Environment.OSVersion}\n" +
+                                  $"UserName: {Environment.UserName}\n" +
+                                  $"----------------\n\n";
+                logContent = metadata + logContent;
+
+                using (var client = new HttpClient())
+                {
+                    client.Timeout = TimeSpan.FromSeconds(30);
+                    if (!string.IsNullOrEmpty(loginToken))
+                    {
+                        client.DefaultRequestHeaders.Add("LoginToken", loginToken);
+                        Log("Pavo Log Yükleme", $"Header eklendi: LoginToken = {loginToken}");
+                    }
+                    else
+                    {
+                        Log("Pavo Log Yükleme", "Header eklenecek LoginToken BOŞ veya NULL!");
+                    }
+                    var content = new StringContent(logContent, Encoding.UTF8, "text/plain");
+                    var response = await client.PostAsync(uploadUrl, content).ConfigureAwait(false);
+                    
+                    string resBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    Log("Pavo Log Yükleme", $"HTTP {(int)response.StatusCode} | Yanıt: {resBody}");
+                    
+                    if (response.IsSuccessStatusCode)
+                    {
+                        try
+                        {
+                            var resJo = JObject.Parse(resBody);
+                            if (resJo["result"]?.ToString() == "success" || resJo["status"]?.ToString() == "200")
+                            {
+                                return true;
+                            }
+                        }
+                        catch
+                        {
+                            if (resBody.IndexOf("success", StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                return true;
+                            }
+                        }
+                    }
+                    return false;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static void StartHeartbeatTask()
+        {
+            Task.Run(async () =>
+            {
+                // Uygulama ilk açıldığında ağın oturması için 15 saniye bekle
+                await Task.Delay(15000).ConfigureAwait(false);
+
+                while (true)
+                {
+                    try
+                    {
+                        // 3 dakikada bir kontrol et
+                        await Task.Delay(TimeSpan.FromMinutes(3)).ConfigureAwait(false);
+
+                        // Eğer son 3 dakika içinde aktif bir istek veya başarılı bir ping yapılmışsa gönderme
+                        if (DateTime.Now - _lastActivityTime < TimeSpan.FromMinutes(3))
+                        {
+                            continue;
+                        }
+
+                        if (!string.IsNullOrEmpty(_lastPavoBaseUrl))
+                        {
+                            string url = _lastPavoBaseUrl.TrimEnd('/') + "/GetDeviceInfo";
+                            
+                            var th = new
+                            {
+                                SerialNumber = _lastSerialNumber ?? "",
+                                TransactionDate = DateTime.Now.ToString("s") + ".000000",
+                                TransactionSequence = GetNextSequence(),
+                                Fingerprint = _lastFingerprint ?? "qrmenu_pavo"
+                            };
+
+                            var payload = new
+                            {
+                                TransactionHandle = th,
+                                DeviceInfo = new { AdditionalInfo = new { serialNumber = true, fingerPrint = true } }
+                            };
+
+                            string bodyJson = JsonConvert.SerializeObject(payload);
+
+                            try
+                            {
+                                await PostToUrlAsync(url, bodyJson).ConfigureAwait(false);
+                                // Başarılı ping de aktivite zamanını günceller
+                                _lastActivityTime = DateTime.Now;
+                            }
+                            catch (Exception ex)
+                            {
+                                // Ping hatasını log dosyasına yaz (sessizce izlenebilsin diye)
+                                Log("Pavo Ping Hata", "Ping isteği başarısız: " + ex.Message);
+                            }
+                        }
+                    }
+                    catch { }
+                }
+            });
         }
     }
 }

@@ -38,7 +38,39 @@ namespace QRMENUE
                 ScrollBars = ScrollBars.Both,
                 WordWrap = false
             };
+
+            Panel topPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 40,
+                BackColor = Color.FromArgb(40, 40, 45)
+            };
+
+            Button btnClear = new Button
+            {
+                Text = "Temizle",
+                Width = 100,
+                Height = 28,
+                Top = 6,
+                Left = 10,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(60, 60, 65),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnClear.FlatAppearance.BorderSize = 0;
+            btnClear.Click += (s, e) => {
+                if (_logBox != null)
+                {
+                    _logBox.Clear();
+                }
+            };
+            topPanel.Controls.Add(btnClear);
+
             this.Controls.Add(_logBox);
+            this.Controls.Add(topPanel);
+            _logBox.BringToFront();
 
             this.Load += PavoPosForm_Load;
             this.FormClosing += PavoPosForm_FormClosing;
